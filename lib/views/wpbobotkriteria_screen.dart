@@ -226,7 +226,7 @@ class _BobotScreenState extends State<BobotScreen>
                                                 data.ketbobot)),
                                             DataCell(MyText.bodySmall(data
                                                 .idkriteria
-                                                .toStringAsFixed(2))),
+                                                )),
                                             if (hakAkses == 'admin')
                                               DataCell(Row(
                                                 children: [

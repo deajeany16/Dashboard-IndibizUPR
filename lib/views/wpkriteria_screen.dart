@@ -226,7 +226,8 @@ class _KriteriaScreenState extends State<KriteriaScreen>
                                                     onPressed: () async {
                                                       await controller
                                                           .getKriteria(
-                                                              data.idkriteria);
+                                                              int.parse(data
+                                                                  .idkriteria));
                                                       await controller.onEdit();
                                                       if (mounted) {
                                                         await showDialog(
@@ -271,9 +272,9 @@ class _KriteriaScreenState extends State<KriteriaScreen>
                                                               .error,
                                                           showCancelText: true,
                                                           onConfirmBtnTap: () =>
-                                                              controller
-                                                                  .deleteKriteria(
-                                                                      data.idkriteria),
+                                                              controller.deleteKriteria(
+                                                                  int.parse(data
+                                                                      .idkriteria)),
                                                         ),
                                                       );
                                                     },

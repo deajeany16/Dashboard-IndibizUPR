@@ -58,6 +58,8 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
   bool isRecommended = false;
   List<String> roadRoutesNames = [];
   List<dynamic> odpInRadius = [];
+  List<dynamic> orderInRadius = [];
+  List<dynamic> surveiInRadius = [];
 
   late BitmapDescriptor surveipin;
   late BitmapDescriptor orderpin;
@@ -131,6 +133,8 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
     double closestDistance = double.infinity;
     LatLng closestODP = odpData.first.getLatLng();
     odpInRadius.clear(); // Clear previous data
+    orderInRadius.clear(); // Clear previous data
+    surveiInRadius.clear();
 
     for (var odp in odpData) {
       LatLng odpPosition = odp.getLatLng();
@@ -156,6 +160,36 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
           });
         });
       }
+
+      // Check orders within 1000m radius
+      for (var order in orderData) {
+        LatLng orderPosition = LatLng(order.latitude, order.longitude);
+        double orderDistance =
+            calculateDistance(currentPosition!, orderPosition);
+
+        if (orderDistance <= radarRadius1000m) {
+          orderInRadius.add({
+            'orderid': order.orderid,
+            'namaperusahaan': order.namaperusahaan,
+            'paket': order.paket
+          });
+        }
+      }
+
+      // Check surveis within 1000m radius
+      for (var survei in surveiData) {
+        LatLng surveiPosition = LatLng(survei.latitude, survei.longitude);
+        double surveiDistance =
+            calculateDistance(currentPosition!, surveiPosition);
+
+        if (surveiDistance <= radarRadius1000m) {
+          surveiInRadius.add({
+            'idsurvei': survei.idsurvei,
+            'namausaha': survei.namausaha,
+            'jenisusaha': survei.jenisusaha
+          });
+        }
+      }
     }
 
     setState(() {
@@ -164,7 +198,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
         _getPolyline(currentPosition!, nearestODPPosition!);
       }
     });
-    await sendDataToBackend(odpInRadius, currentPosition!);
+    await recommendedProcess(odpInRadius, currentPosition!);
   }
 
   Future<void> _getPolyline(LatLng origin, LatLng destination) async {
@@ -267,15 +301,12 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
     } else {
       setState(() {
         selectedODPPosition = position;
-        isRecommended = odpInRadius.any((recommendation) =>
-            recommendation['namaodp'] == selectedODP?.namaodp);
       });
 
       if (currentPosition != null) {
         _getPolyline(currentPosition!, position);
       }
     }
-    _scrollToSelectedODP(selectedODP!.idodp);
   }
 
   void _scrollToSelectedODP(int idodp) {
@@ -309,7 +340,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
       final ByteData byteData = await rootBundle.load('assets/images/pin1.png');
       final Uint8List list = byteData.buffer.asUint8List();
 
-      final resizedImageData = await _resizeImage(list, 30);
+      final resizedImageData = await _resizeImage(list, 40);
 
       setState(() {
         surveipin = BitmapDescriptor.fromBytes(resizedImageData);
@@ -325,7 +356,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
       final ByteData byteData = await rootBundle.load('assets/images/pin2.png');
       final Uint8List list = byteData.buffer.asUint8List();
 
-      final resizedImageData = await _resizeImage(list, 30);
+      final resizedImageData = await _resizeImage(list, 40);
 
       setState(() {
         orderpin = BitmapDescriptor.fromBytes(resizedImageData);
@@ -369,6 +400,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
       _updateCameraPosition(currentPosition!);
       _resetPolyline();
     });
+    _findNearestODP();
   }
 
   void _handleSearch() {
@@ -386,7 +418,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
     }
   }
 
-  Future<void> sendDataToBackend(
+  Future<void> recommendedProcess(
       List<dynamic> odpInRadius, LatLng? currentPosition) async {
     // URL backend (ganti dengan URL backend Anda)
     String backendUrl =
@@ -440,13 +472,92 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
     }
   }
 
-  void _updatePolyline(LatLng destination) {
-    setState(() {
-      polylineCoordinates = [
-        currentPosition!,
-        destination,
-      ];
-    });
+  Future<void> strategicProcess(
+      List<dynamic> odpInRadius, LatLng? currentPosition) async {
+    // URL backend (ganti dengan URL backend Anda)
+    String backendUrl =
+        'https://xj9wv6w0-3000.asse.devtunnels.ms/strategic/processstrategic';
+
+    try {
+      // Tambahkan data currentPosition ke dalam payload
+      Map<String, dynamic> payload = {
+        'currentPosition': {
+          'latitude': currentPosition!.latitude,
+          'longitude': currentPosition.longitude,
+        },
+        'odpInRadius': odpInRadius,
+        'orderInRadius': orderInRadius,
+        'surveiInRadius': surveiInRadius,
+      };
+
+      // Kirim permintaan POST ke backend
+      http.Response response = await http.post(
+        Uri.parse(backendUrl),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(payload),
+      );
+
+      // Handle response from backend
+      if (response.statusCode == 200) {
+        // Parse JSON response
+        var responseData = jsonDecode(response.body);
+        List<dynamic> recommendations = responseData['recommendations'];
+
+        // Clear previous data and populate odpInRadius
+        odpInRadius.clear();
+        orderInRadius.clear();
+        surveiInRadius.clear();
+        // for (var recommendation in recommendations) {
+        //   odpInRadius.add({
+        //     'namaodp': recommendation['namaodp'],
+        //     'kategori': recommendation['kategori'],
+        //     'jarak': recommendation['jarak'],
+        //     // Add other fields as needed
+        //   });
+        // }
+
+        // // Sort odpInRadius or handle as needed
+        // odpInRadius.sort((a, b) => a['jarak'].compareTo(b['jarak']));
+      } else {
+        print(
+            'Failed to send data. Error ${response.statusCode}: ${response.reasonPhrase}');
+      }
+    } catch (e) {
+      print('Error sending data to backend: $e');
+      // Handle error
+    }
+  }
+
+  void _updatePolyline(LatLng destination) async {
+    if (kIsWeb) {
+      setState(() {
+        polylineCoordinates = [
+          currentPosition!,
+          destination,
+        ];
+      });
+    } else {
+      final directionsLine = DirectionsLine(dio: Dio());
+      final directions = await directionsLine.getDirections(
+        origin: currentPosition!,
+        destination: destination,
+      );
+
+      if (directions != null) {
+        setState(() {
+          polylineCoordinates = directions.polylinePoints
+              .map((point) => LatLng(point.latitude, point.longitude))
+              .toList();
+        });
+      } else {
+        setState(() {
+          // Handle the case when directions are not available or error occurs
+          polylineCoordinates.clear();
+        });
+      }
+    }
   }
 
   int _lastClickedIndex = -1;
@@ -672,10 +783,14 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                                     odpDetail.reserved.toString(),
                                     odpDetail.kategori,
                                     isRecommended);
+                                _moveToLocation(LatLng(
+                                    odpDetail.latitude, odpDetail.longitude));
                               } else {
                                 _updatePolyline(LatLng(
                                     recommendation['latitude'],
                                     recommendation['longitude']));
+                                _moveToLocation(LatLng(
+                                    odpDetail.latitude, odpDetail.longitude));
                                 _lastClickedIndex = index;
                               }
                             },

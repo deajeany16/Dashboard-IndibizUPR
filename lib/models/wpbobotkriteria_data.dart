@@ -7,7 +7,7 @@ class Bobot {
   final String namakriteria;
   final int bobot;
   final String ketbobot;
-  final int idkriteria;
+  final String idkriteria;
   final int idbobot; // Mengubah tipe data dari String menjadi int
 
   Bobot(this.idbobot, this.namakriteria, this.bobot, this.ketbobot,
@@ -19,7 +19,7 @@ class Bobot {
     String namakriteria = decoder.getString('namakriteria');
     int bobot = decoder.getInt('bobot');
     String ketbobot = decoder.getString('ketbobot');
-    int idkriteria = decoder.getInt('idkriteria');
+    String idkriteria = decoder.getString('idkriteria');
     int idbobot = decoder.getInt('idbobot');
 
     return Bobot(idbobot, namakriteria, bobot, ketbobot, idkriteria);

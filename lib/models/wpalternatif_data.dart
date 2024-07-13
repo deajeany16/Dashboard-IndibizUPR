@@ -5,7 +5,7 @@ import 'package:webui/helper/services/json_decoder.dart';
 
 class Alternatif {
   final String namaalternatif;
-  final int idalternatif; // Mengubah tipe data dari String menjadi int
+  final String idalternatif; // Mengubah tipe data dari String menjadi int
 
   Alternatif(this.idalternatif, this.namaalternatif);
 
@@ -13,7 +13,7 @@ class Alternatif {
     JSONDecoder decoder = JSONDecoder(json);
 
     String namaalternatif = decoder.getString('namaalternatif');
-    int idalternatif = decoder.getInt('idalternatif');
+    String idalternatif = decoder.getString('idalternatif');
 
     return Alternatif(idalternatif, namaalternatif);
   }

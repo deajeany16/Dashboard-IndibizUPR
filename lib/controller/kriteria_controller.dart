@@ -29,6 +29,12 @@ class KriteriaController extends MyController {
 
   void _initializeValidators() {
     inputValidator.addField(
+      'idkriteria',
+      label: "Kode Kriteria",
+      required: true,
+      controller: TextEditingController(),
+    );
+    inputValidator.addField(
       'kriteria',
       label: "Kriteria",
       required: true,
@@ -50,6 +56,12 @@ class KriteriaController extends MyController {
   }
 
   void _initializeEditValidator() {
+    editValidator.addField(
+      'idkriteria',
+      label: "Kode Kriteria",
+      required: true,
+      controller: TextEditingController(text: kriteria['idkriteria']),
+    );
     editValidator.addField(
       'kriteria',
       label: "Kriteria",
@@ -76,7 +88,7 @@ class KriteriaController extends MyController {
     return List.generate(
       6,
       (index) => Kriteria(
-          0,
+          'idkriteria',
           'kriteria',
           0, // Ganti nilai dengan default sesuai tipe data yang diinginkan
           0.0),
@@ -92,6 +104,7 @@ class KriteriaController extends MyController {
   }
 
   Future<void> onEdit() async {
+    editValidator.setControllerText('idkriteria', kriteria['idkriteria'] ?? '');
     editValidator.setControllerText('kriteria', kriteria['kriteria'] ?? '');
     editValidator.setControllerText(
         'jumlahkriteria', kriteria['jumlahkriteria']?.toString() ?? '');

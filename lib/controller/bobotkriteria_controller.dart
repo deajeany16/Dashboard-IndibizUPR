@@ -48,7 +48,7 @@ class BobotkriteriaController extends MyController {
     );
     inputValidator.addField(
       'idkriteria',
-      label: "idkriteria",
+      label: "Kode Kriteria",
       required: false,
       controller: TextEditingController(),
     );
@@ -87,7 +87,7 @@ class BobotkriteriaController extends MyController {
   List<Bobot> _placeholderData() {
     return List.generate(
       6,
-      (index) => Bobot(0, 'namakriteria', 0, 'ketbobot', 0),
+      (index) => Bobot(0, 'namakriteria', 0, 'ketbobot', 'kodekriteria'),
     );
   }
 
@@ -108,7 +108,7 @@ class BobotkriteriaController extends MyController {
     editValidator.setControllerText(
         'ketbobot', bobotkriteria['ketbobot'] ?? '');
     editValidator.setControllerText(
-        'idkriteria', bobotkriteria['idkriteria']?.toString() ?? '');
+        'idkriteria', bobotkriteria['idkriteria'] ?? '');
   }
 
   Future<void> getallBobot() async {

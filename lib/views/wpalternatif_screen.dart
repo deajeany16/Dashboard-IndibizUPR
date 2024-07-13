@@ -146,6 +146,13 @@ class _AlternatifScreenState extends State<AlternatifScreen>
                                     DataColumn(
                                         label: Skeleton.keep(
                                       child: MyText.labelMedium(
+                                        'Kode Alternatif'.tr(),
+                                        color: contentTheme.primary,
+                                      ),
+                                    )),
+                                    DataColumn(
+                                        label: Skeleton.keep(
+                                      child: MyText.labelMedium(
                                         'Nama Alternatif'.tr(),
                                         color: contentTheme.primary,
                                       ),
@@ -177,8 +184,9 @@ class _AlternatifScreenState extends State<AlternatifScreen>
                                                     splashRadius: 20,
                                                     onPressed: () async {
                                                       await controller
-                                                          .getAlternatif(data
-                                                              .idalternatif);
+                                                          .getAlternatif(
+                                                              int.parse(data
+                                                                  .idalternatif));
                                                       await controller.onEdit();
                                                       if (mounted) {
                                                         await showDialog(
@@ -223,9 +231,9 @@ class _AlternatifScreenState extends State<AlternatifScreen>
                                                               .error,
                                                           showCancelText: true,
                                                           onConfirmBtnTap: () =>
-                                                              controller
-                                                                  .deleteAlternatif(
-                                                                      data.idalternatif),
+                                                              controller.deleteAlternatif(
+                                                                  int.parse(data
+                                                                      .idalternatif)),
                                                         ),
                                                       );
                                                     },

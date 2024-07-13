@@ -27,6 +27,12 @@ class AlternatifController extends MyController {
 
   void _initializeValidators() {
     inputValidator.addField(
+      'idalternatif',
+      label: "Kode Alternatif",
+      required: true,
+      controller: TextEditingController(),
+    );
+    inputValidator.addField(
       'namaalternatif',
       label: "Nama Alternatif",
       required: true,
@@ -36,6 +42,12 @@ class AlternatifController extends MyController {
   }
 
   void _initializeEditValidator() {
+    editValidator.addField(
+      'idalternatif',
+      label: "Kode Alternatif",
+      required: true,
+      controller: TextEditingController(text: alternatif['idalternatif']),
+    );
     editValidator.addField(
       'namaalternatif',
       label: "Nama Alternatif",
@@ -49,7 +61,7 @@ class AlternatifController extends MyController {
     return List.generate(
       2,
       (index) => Alternatif(
-        0,
+        'kodealternatif',
         'namaalternatif',
       ),
     );
@@ -57,6 +69,8 @@ class AlternatifController extends MyController {
 
   Future<void> onEdit() async {
     editValidator.setControllerText(
+        'idalternatif', alternatif['idalternatif'] ?? '');
+        editValidator.setControllerText(
         'namaalternatif', alternatif['namaalternatif'] ?? '');
   }
 

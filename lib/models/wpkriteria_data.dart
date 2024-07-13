@@ -7,7 +7,7 @@ class Kriteria {
   final String kriteria;
   final int jumlahkriteria;
   final double normalisasi;
-  final int idkriteria; // Mengubah tipe data dari String menjadi int
+  final String idkriteria; // Mengubah tipe data dari String menjadi int
 
   Kriteria(
       this.idkriteria, this.kriteria, this.jumlahkriteria, this.normalisasi);
@@ -18,7 +18,7 @@ class Kriteria {
     String kriteria = decoder.getString('kriteria');
     int jumlahkriteria = decoder.getInt('jumlahkriteria');
     double normalisasi = decoder.getDouble('normalisasi');
-    int idkriteria = decoder.getInt('idkriteria');
+    String idkriteria = decoder.getString('idkriteria');
 
     return Kriteria(idkriteria, kriteria, jumlahkriteria, normalisasi);
   }
