@@ -585,6 +585,40 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
     }
   }
 
+  List<LatLng> _createSemiCircle(
+      LatLng center, double innerRadius, double outerRadius, bool isNorth) {
+    List<LatLng> points = [];
+    final int segments = 180; // Banyaknya titik dalam setengah lingkaran
+
+    // Membuat setengah lingkaran luar
+    for (int i = 0; i <= segments; i++) {
+      double theta = (i * 1.0 / segments) *
+          3.14159; // 0 hingga pi untuk setengah lingkaran
+      if (!isNorth) {
+        theta +=
+            3.14159; // Jika setengah lingkaran selatan, geser theta sebesar pi
+      }
+      double dx = outerRadius * 0.0000089 * cos(theta);
+      double dy = outerRadius * 0.0000089 * sin(theta);
+      points.add(LatLng(center.latitude + dy, center.longitude + dx));
+    }
+
+    // Membuat setengah lingkaran dalam secara terbalik
+    for (int i = segments; i >= 0; i--) {
+      double theta = (i * 1.0 / segments) *
+          3.14159; // 0 hingga pi untuk setengah lingkaran
+      if (!isNorth) {
+        theta +=
+            3.14159; // Jika setengah lingkaran selatan, geser theta sebesar pi
+      }
+      double dx = innerRadius * 0.0000089 * cos(theta);
+      double dy = innerRadius * 0.0000089 * sin(theta);
+      points.add(LatLng(center.latitude + dy, center.longitude + dx));
+    }
+
+    return points;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isMobile = !kIsWeb && MediaQuery.of(context).size.width < 600;
@@ -850,7 +884,6 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
                                 radius: radarRadius250m,
                                 strokeWidth: 2,
                                 strokeColor: Colors.blue.withOpacity(0.5),
-                                fillColor: Colors.blue.withOpacity(0.2),
                               ),
                               Circle(
                                 circleId: CircleId('radarZone500m'),
@@ -882,6 +915,48 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
                                   color: Colors.green,
                                   width: 5,
                                 ),
+                              Polyline(
+                                polylineId: PolylineId('horizontalLine'),
+                                points: [
+                                  LatLng(currentPosition!.latitude,
+                                      currentPosition!.longitude - 0.01),
+                                  LatLng(currentPosition!.latitude,
+                                      currentPosition!.longitude + 0.01),
+                                ],
+                                color: Colors.black,
+                                width: 2,
+                              ),
+                            },
+                            polygons: <Polygon>{
+                              Polygon(
+                                polygonId: PolygonId('northSemiCircle250m500m'),
+                                points: _createSemiCircle(
+                                    currentPosition!, 250, 500, true),
+                                fillColor: Colors.blue.withOpacity(0.3),
+                                strokeColor: Colors.blue.withOpacity(0.5),
+                                strokeWidth: 2,
+                              ),
+                              // Polygon(
+                              //   polygonId: PolygonId('southSemiCircle250m500m'),
+                              //   points: _createSemiCircle(currentPosition!, 250, 500, false),
+                              //   fillColor: Colors.blue.withOpacity(0.3),
+                              //   strokeColor: Colors.blue.withOpacity(0.5),
+                              //   strokeWidth: 2,
+                              // ),
+                              // Polygon(
+                              //   polygonId: PolygonId('northSemiCircle500m750m'),
+                              //   points: _createSemiCircle(currentPosition!, 500, 750, true),
+                              //   fillColor: Colors.red.withOpacity(0.3),
+                              //   strokeColor: Colors.red.withOpacity(0.5),
+                              //   strokeWidth: 2,
+                              // ),
+                              // Polygon(
+                              //   polygonId: PolygonId('southSemiCircle500m750m'),
+                              //   points: _createSemiCircle(currentPosition!, 500, 750, false),
+                              //   fillColor: Colors.red.withOpacity(0.3),
+                              //   strokeColor: Colors.red.withOpacity(0.5),
+                              //   strokeWidth: 2,
+                              // ),
                             },
                           ),
                         Positioned(
