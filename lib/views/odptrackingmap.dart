@@ -52,6 +52,8 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
   List<ODP> odpData = [];
   LatLng? nearestODPPosition;
   LatLng? selectedODPPosition;
+  LatLng? selectedSurveiPosition;
+  LatLng? selectedOrderPosition;
   List<LatLng> polylineCoordinates = [];
   late BitmapDescriptor personIcon;
   bool checkhighway = false;
@@ -70,6 +72,8 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
 
   static const double radarRadius250m = 250;
   static const double radarRadius1000m = 1000;
+  static const double radarRadius500m = 500;
+  static const double radarRadius750m = 750;
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -318,6 +322,90 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
     }
   }
 
+  Future<void> recommendedProcess(
+      List<dynamic> odpInRadius, LatLng? currentPosition) async {
+    // URL backend (ganti dengan URL backend Anda)
+    String backendUrl =
+        'https://xj9wv6w0-3000.asse.devtunnels.ms/recommend/processrecommend';
+
+    try {
+      // Tambahkan data currentPosition ke dalam payload
+      Map<String, dynamic> payload = {
+        'currentPosition': {
+          'latitude': currentPosition!.latitude,
+          'longitude': currentPosition.longitude,
+        },
+        'odpInRadius': odpInRadius,
+      };
+
+      // Kirim permintaan POST ke backend
+      http.Response response = await http.post(
+        Uri.parse(backendUrl),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(payload),
+      );
+
+      // Handle response from backend
+      if (response.statusCode == 200) {
+        // Parse JSON response
+        var responseData = jsonDecode(response.body);
+        List<dynamic> recommendations = responseData['recommendations'];
+
+        // Clear previous data and populate odpInRadius
+        odpInRadius.clear();
+        for (var recommendation in recommendations) {
+          odpInRadius.add({
+            'namaodp': recommendation['namaodp'],
+            'kategori': recommendation['kategori'],
+            'jarak': recommendation['jarak'],
+            // Add other fields as needed
+          });
+        }
+
+        // Sort odpInRadius or handle as needed
+        odpInRadius.sort((a, b) => a['jarak'].compareTo(b['jarak']));
+      } else {
+        print(
+            'Failed to send data. Error ${response.statusCode}: ${response.reasonPhrase}');
+      }
+    } catch (e) {
+      print('Error sending data to backend: $e');
+      // Handle error
+    }
+  }
+
+  void _updatePolyline(LatLng destination) async {
+    if (kIsWeb) {
+      setState(() {
+        polylineCoordinates = [
+          currentPosition!,
+          destination,
+        ];
+      });
+    } else {
+      final directionsLine = DirectionsLine(dio: Dio());
+      final directions = await directionsLine.getDirections(
+        origin: currentPosition!,
+        destination: destination,
+      );
+
+      if (directions != null) {
+        setState(() {
+          polylineCoordinates = directions.polylinePoints
+              .map((point) => LatLng(point.latitude, point.longitude))
+              .toList();
+        });
+      } else {
+        setState(() {
+          // Handle the case when directions are not available or error occurs
+          polylineCoordinates.clear();
+        });
+      }
+    }
+  }
+
   void _loadPersonIcon() async {
     try {
       final ByteData byteData =
@@ -418,148 +506,6 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
     }
   }
 
-  Future<void> recommendedProcess(
-      List<dynamic> odpInRadius, LatLng? currentPosition) async {
-    // URL backend (ganti dengan URL backend Anda)
-    String backendUrl =
-        'https://xj9wv6w0-3000.asse.devtunnels.ms/recommend/processrecommend';
-
-    try {
-      // Tambahkan data currentPosition ke dalam payload
-      Map<String, dynamic> payload = {
-        'currentPosition': {
-          'latitude': currentPosition!.latitude,
-          'longitude': currentPosition.longitude,
-        },
-        'odpInRadius': odpInRadius,
-      };
-
-      // Kirim permintaan POST ke backend
-      http.Response response = await http.post(
-        Uri.parse(backendUrl),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(payload),
-      );
-
-      // Handle response from backend
-      if (response.statusCode == 200) {
-        // Parse JSON response
-        var responseData = jsonDecode(response.body);
-        List<dynamic> recommendations = responseData['recommendations'];
-
-        // Clear previous data and populate odpInRadius
-        odpInRadius.clear();
-        for (var recommendation in recommendations) {
-          odpInRadius.add({
-            'namaodp': recommendation['namaodp'],
-            'kategori': recommendation['kategori'],
-            'jarak': recommendation['jarak'],
-            // Add other fields as needed
-          });
-        }
-
-        // Sort odpInRadius or handle as needed
-        odpInRadius.sort((a, b) => a['jarak'].compareTo(b['jarak']));
-      } else {
-        print(
-            'Failed to send data. Error ${response.statusCode}: ${response.reasonPhrase}');
-      }
-    } catch (e) {
-      print('Error sending data to backend: $e');
-      // Handle error
-    }
-  }
-
-  Future<void> strategicProcess(
-      List<dynamic> odpInRadius, LatLng? currentPosition) async {
-    // URL backend (ganti dengan URL backend Anda)
-    String backendUrl =
-        'https://xj9wv6w0-3000.asse.devtunnels.ms/strategic/processstrategic';
-
-    try {
-      // Tambahkan data currentPosition ke dalam payload
-      Map<String, dynamic> payload = {
-        'currentPosition': {
-          'latitude': currentPosition!.latitude,
-          'longitude': currentPosition.longitude,
-        },
-        'odpInRadius': odpInRadius,
-        'orderInRadius': orderInRadius,
-        'surveiInRadius': surveiInRadius,
-      };
-
-      // Kirim permintaan POST ke backend
-      http.Response response = await http.post(
-        Uri.parse(backendUrl),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(payload),
-      );
-
-      // Handle response from backend
-      if (response.statusCode == 200) {
-        // Parse JSON response
-        var responseData = jsonDecode(response.body);
-        List<dynamic> recommendations = responseData['recommendations'];
-
-        // Clear previous data and populate odpInRadius
-        odpInRadius.clear();
-        orderInRadius.clear();
-        surveiInRadius.clear();
-        // for (var recommendation in recommendations) {
-        //   odpInRadius.add({
-        //     'namaodp': recommendation['namaodp'],
-        //     'kategori': recommendation['kategori'],
-        //     'jarak': recommendation['jarak'],
-        //     // Add other fields as needed
-        //   });
-        // }
-
-        // // Sort odpInRadius or handle as needed
-        // odpInRadius.sort((a, b) => a['jarak'].compareTo(b['jarak']));
-      } else {
-        print(
-            'Failed to send data. Error ${response.statusCode}: ${response.reasonPhrase}');
-      }
-    } catch (e) {
-      print('Error sending data to backend: $e');
-      // Handle error
-    }
-  }
-
-  void _updatePolyline(LatLng destination) async {
-    if (kIsWeb) {
-      setState(() {
-        polylineCoordinates = [
-          currentPosition!,
-          destination,
-        ];
-      });
-    } else {
-      final directionsLine = DirectionsLine(dio: Dio());
-      final directions = await directionsLine.getDirections(
-        origin: currentPosition!,
-        destination: destination,
-      );
-
-      if (directions != null) {
-        setState(() {
-          polylineCoordinates = directions.polylinePoints
-              .map((point) => LatLng(point.latitude, point.longitude))
-              .toList();
-        });
-      } else {
-        setState(() {
-          // Handle the case when directions are not available or error occurs
-          polylineCoordinates.clear();
-        });
-      }
-    }
-  }
-
   int _lastClickedIndex = -1;
   final ScrollController _scrollController = ScrollController();
 
@@ -648,18 +594,6 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                       _moveToLocation(newPosition);
                     },
                   ),
-                  for (var order in orderData)
-                    Marker(
-                      markerId: MarkerId(order.orderid.toString()),
-                      icon: orderpin,
-                      position: order.getLatLng(),
-                    ),
-                  for (var survei in surveiData)
-                    Marker(
-                      markerId: MarkerId(survei.idsurvei.toString()),
-                      icon: surveipin,
-                      position: survei.getLatLng(),
-                    ),
                   for (var odp in odpData)
                     Marker(
                       markerId: MarkerId(odp.idodp.toString()),
@@ -678,6 +612,20 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                     strokeWidth: 2,
                     strokeColor: Colors.blue.withOpacity(0.5),
                     fillColor: Colors.blue.withOpacity(0.2),
+                  ),
+                  Circle(
+                    circleId: CircleId('radarZone500m'),
+                    center: currentPosition!,
+                    radius: radarRadius500m,
+                    strokeWidth: 2,
+                    strokeColor: Colors.red.withOpacity(0.5),
+                  ),
+                  Circle(
+                    circleId: CircleId('radarZone750m'),
+                    center: currentPosition!,
+                    radius: radarRadius750m,
+                    strokeWidth: 2,
+                    strokeColor: Colors.red.withOpacity(0.5),
                   ),
                   Circle(
                     circleId: CircleId('radarZone1000m'),
@@ -887,19 +835,6 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                                   _moveToLocation(newPosition);
                                 },
                               ),
-                              for (var order in orderData)
-                                Marker(
-                                  markerId: MarkerId(order.orderid.toString()),
-                                  icon: orderpin,
-                                  position: order.getLatLng(),
-                                ),
-                              for (var survei in surveiData)
-                                Marker(
-                                  markerId:
-                                      MarkerId(survei.idsurvei.toString()),
-                                  icon: surveipin,
-                                  position: survei.getLatLng(),
-                                ),
                               for (var odp in odpData)
                                 Marker(
                                   markerId: MarkerId(odp.idodp.toString()),
@@ -918,6 +853,20 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                                 strokeWidth: 2,
                                 strokeColor: Colors.blue.withOpacity(0.5),
                                 fillColor: Colors.blue.withOpacity(0.2),
+                              ),
+                              Circle(
+                                circleId: CircleId('radarZone500m'),
+                                center: currentPosition!,
+                                radius: radarRadius500m,
+                                strokeWidth: 2,
+                                strokeColor: Colors.red.withOpacity(0.5),
+                              ),
+                              Circle(
+                                circleId: CircleId('radarZone750m'),
+                                center: currentPosition!,
+                                radius: radarRadius750m,
+                                strokeWidth: 2,
+                                strokeColor: Colors.red.withOpacity(0.5),
                               ),
                               Circle(
                                 circleId: CircleId('radarZone1000m'),

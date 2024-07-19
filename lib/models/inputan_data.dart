@@ -105,8 +105,6 @@ class Inputan {
     return LatLng(latitude, longitude);
   }
 
-  //Dummy
-
   static List<Inputan>? _dummyList;
 
   static Future<List<Inputan>> get dummyList async {
