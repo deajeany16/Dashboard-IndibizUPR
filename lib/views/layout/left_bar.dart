@@ -162,6 +162,7 @@ class _LeftBarState extends State<LeftBar>
                     isCondensed: isCondensed,
                     route: '/mapodp',
                   ),
+                  if (hakAkses == 'admin')
                   NavigationItem(
                     iconData: Icons.pin_drop,
                     title: "Data ODP".tr(),
@@ -175,24 +176,28 @@ class _LeftBarState extends State<LeftBar>
                     isCondensed: isCondensed,
                     route: '/ordersurveimap',
                   ),
+                  if (hakAkses == 'admin')
                   NavigationItem(
                     iconData: Icons.work,
                     title: "Data Survei".tr(),
                     isCondensed: isCondensed,
                     route: '/survei',
                   ),
+                  if (hakAkses == 'admin')
                   NavigationItem(
                     iconData: Icons.data_exploration,
                     title: "Data Alternatif".tr(),
                     isCondensed: isCondensed,
                     route: '/alternatif',
                   ),
+                  if (hakAkses == 'admin')
                   NavigationItem(
                     iconData: Icons.dataset,
                     title: "Data Kriteria".tr(),
                     isCondensed: isCondensed,
                     route: '/kriteria',
                   ),
+                  if (hakAkses == 'admin')
                   NavigationItem(
                     iconData: Icons.dataset,
                     title: "Data Bobot Kriteria".tr(),

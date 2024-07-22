@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' show atan2, cos, pi, sin, sqrt;
@@ -76,6 +78,11 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
   List<dynamic> detectedData1000mnorth = [];
   List<dynamic> detectedData1000msouth = [];
 
+  List<String> polygonCodes = [];
+  String? firstPolygonCode;
+
+  LatLng? lastMarkerPosition;
+
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -91,6 +98,8 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
       await fetchLocationUpdates();
       await loadODPData();
       _findNearestODP();
+      _scrollLeft();
+      _scrollRight();
     });
   }
 
@@ -111,10 +120,13 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
     locationController.onLocationChanged.listen((LocationData currentLocation) {
       if (mounted) {
         setState(() {
-          currentPosition =
-              LatLng(currentLocation.latitude!, currentLocation.longitude!);
-          userPosition = currentPosition;
+          if (lastMarkerPosition == null) {
+            currentPosition =
+                LatLng(currentLocation.latitude!, currentLocation.longitude!);
+            userPosition = currentPosition;
+          }
         });
+        detectDataInRadius();
       }
     });
   }
@@ -133,15 +145,6 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
   void _findNearestODP() {
     if (currentPosition == null || odpData.isEmpty) return;
 
-    detectedData250mnorth.clear(); // Clear previous data
-    detectedData500mnorth.clear(); // Clear previous data
-    detectedData750mnorth.clear();
-    detectedData1000mnorth.clear();
-    detectedData250msouth.clear(); // Clear previous data
-    detectedData500msouth.clear(); // Clear previous data
-    detectedData750msouth.clear();
-    detectedData1000msouth.clear();
-
     double closestDistance = double.infinity;
     LatLng closestODP = odpData.first.getLatLng();
 
@@ -159,7 +162,6 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
         _getPolyline(currentPosition!, nearestODPPosition!);
       }
     });
-    detectDataInRadius();
   }
 
   Future<void> _getPolyline(LatLng origin, LatLng destination) async {
@@ -377,6 +379,15 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
   void detectDataInRadius() {
     if (currentPosition == null) return;
 
+    detectedData250mnorth.clear(); // Clear previous data
+    detectedData500mnorth.clear(); // Clear previous data
+    detectedData750mnorth.clear();
+    detectedData1000mnorth.clear();
+    detectedData250msouth.clear(); // Clear previous data
+    detectedData500msouth.clear(); // Clear previous data
+    detectedData750msouth.clear();
+    detectedData1000msouth.clear();
+
     // Data yang akan dikirim
     Map<String, List<dynamic>> detectedData = {
       "detectedData250mnorth": [],
@@ -454,29 +465,17 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
       final response = await http.post(
         Uri.parse(apiUrl),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(detectedData), // Kirim data langsung sebagai JSON
+        body: jsonEncode(detectedData),
       );
 
       if (response.statusCode == 200) {
         print('Data berhasil dikirim.');
-      } else {
-        print('Gagal mengirim data: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Terjadi kesalahan saat mengirim data: $e');
-    }
-  }
-
-  Future<void> sendData(String apiUrl, List<dynamic> data) async {
-    try {
-      final response = await http.post(
-        Uri.parse(apiUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(data), // Kirim data langsung sebagai array
-      );
-
-      if (response.statusCode == 200) {
-        print('Data berhasil dikirim.');
+        setState(() {
+          var responseData = jsonDecode(response.body);
+          if (responseData['alternativesData'].isNotEmpty) {
+            firstPolygonCode = responseData['alternativesData'][0]['kode'];
+          }
+        });
       } else {
         print('Gagal mengirim data: ${response.statusCode}');
       }
@@ -578,6 +577,7 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
         double lat = double.tryParse(coordinates[0]) ?? 0.0;
         double lng = double.tryParse(coordinates[1]) ?? 0.0;
         _moveToLocation(LatLng(lat, lng));
+        _findNearestODP();
       } else {
         // Handle invalid input format
         print('Invalid input format. Please enter "lat,lng".');
@@ -617,6 +617,100 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
     }
 
     return points;
+  }
+
+  Set<Polygon> _buildPolygons() {
+    Set<Polygon> polygons = {};
+    final center = currentPosition!;
+
+    if (firstPolygonCode != null) {
+      if (firstPolygonCode == 'A1') {
+        polygons.add(Polygon(
+          polygonId: PolygonId('A1'),
+          points: _createSemiCircle(center, 0, 250, true),
+          fillColor: Colors.red.withOpacity(0.5),
+          strokeColor: Colors.red,
+          strokeWidth: 2,
+        ));
+      } else if (firstPolygonCode == 'A2') {
+        polygons.add(Polygon(
+          polygonId: PolygonId('A2'),
+          points: _createSemiCircle(center, 0, 250, false),
+          fillColor: Colors.green.withOpacity(0.5),
+          strokeColor: Colors.green,
+          strokeWidth: 2,
+        ));
+      } else if (firstPolygonCode == 'A3') {
+        polygons.add(Polygon(
+          polygonId: PolygonId('A3'),
+          points: _createSemiCircle(center, 250, 500, true),
+          fillColor: Colors.blue.withOpacity(0.5),
+          strokeColor: Colors.blue,
+          strokeWidth: 2,
+        ));
+      } else if (firstPolygonCode == 'A4') {
+        polygons.add(Polygon(
+          polygonId: PolygonId('A4'),
+          points: _createSemiCircle(center, 250, 500, false),
+          fillColor: Colors.yellow.withOpacity(0.5),
+          strokeColor: Colors.yellow,
+          strokeWidth: 2,
+        ));
+      } else if (firstPolygonCode == 'A5') {
+        polygons.add(Polygon(
+          polygonId: PolygonId('A5'),
+          points: _createSemiCircle(center, 500, 750, true),
+          fillColor: Colors.purple.withOpacity(0.5),
+          strokeColor: Colors.purple,
+          strokeWidth: 2,
+        ));
+      } else if (firstPolygonCode == 'A6') {
+        polygons.add(Polygon(
+          polygonId: PolygonId('A6'),
+          points: _createSemiCircle(center, 500, 750, false),
+          fillColor: Colors.orange.withOpacity(0.5),
+          strokeColor: Colors.orange,
+          strokeWidth: 2,
+        ));
+      } else if (firstPolygonCode == 'A7') {
+        polygons.add(Polygon(
+          polygonId: PolygonId('A7'),
+          points: _createSemiCircle(center, 750, 1000, true),
+          fillColor: Colors.cyan.withOpacity(0.5),
+          strokeColor: Colors.cyan,
+          strokeWidth: 2,
+        ));
+      } else if (firstPolygonCode == 'A8') {
+        polygons.add(Polygon(
+          polygonId: PolygonId('A8'),
+          points: _createSemiCircle(center, 750, 1000, false),
+          fillColor: Colors.brown.withOpacity(0.5),
+          strokeColor: Colors.brown,
+          strokeWidth: 2,
+        ));
+      }
+    }
+
+    return polygons;
+  }
+
+  int _lastClickedIndex = -1;
+  final ScrollController _scrollController = ScrollController();
+
+  void _scrollLeft() {
+    _scrollController.animateTo(
+      _scrollController.position.pixels - 100,
+      duration: Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _scrollRight() {
+    _scrollController.animateTo(
+      _scrollController.position.pixels + 100,
+      duration: Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
@@ -685,6 +779,10 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
                     position: currentPosition!,
                     draggable: true,
                     onDragEnd: (newPosition) {
+                      setState(() {
+                        lastMarkerPosition = newPosition;
+                        currentPosition = newPosition;
+                      });
                       _moveToLocation(newPosition);
                     },
                   ),
@@ -756,6 +854,7 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
                       width: 5,
                     ),
                 },
+                polygons: _buildPolygons(),
               ),
             Positioned(
               top: 16.0,
@@ -829,192 +928,248 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
                 children: [
                   TopBar(),
                   Expanded(
-                    child: Stack(
-                      children: [
-                        if (currentPosition != null)
-                          GoogleMap(
-                            onMapCreated: (GoogleMapController controller) {
-                              _controller.complete(controller);
-                            },
-                            initialCameraPosition: CameraPosition(
-                                target: currentPosition!, zoom: 17),
-                            markers: <Marker>{
+                    child: Stack(children: [
+                      if (currentPosition != null)
+                        GoogleMap(
+                          onMapCreated: (GoogleMapController controller) {
+                            _controller.complete(controller);
+                          },
+                          initialCameraPosition: CameraPosition(
+                              target: currentPosition!, zoom: 17),
+                          markers: <Marker>{
+                            Marker(
+                              markerId: const MarkerId('currentLocation'),
+                              icon: personIcon,
+                              position: currentPosition!,
+                              draggable: true,
+                              onDragEnd: (newPosition) {
+                                setState(() {
+                                  lastMarkerPosition = newPosition;
+                                  currentPosition = newPosition;
+                                });
+                                _moveToLocation(newPosition);
+                              },
+                            ),
+                            for (var odp in odpData)
                               Marker(
-                                markerId: const MarkerId('currentLocation'),
-                                icon: personIcon,
-                                position: currentPosition!,
-                                draggable: true,
-                                onDragEnd: (newPosition) {
-                                  _moveToLocation(newPosition);
+                                markerId: MarkerId(odp.idodp.toString()),
+                                icon: BitmapDescriptor.defaultMarker,
+                                position: odp.getLatLng(),
+                                onTap: () {
+                                  _onODPMarkerTapped(odp.getLatLng());
                                 },
                               ),
-                              for (var odp in odpData)
-                                Marker(
-                                  markerId: MarkerId(odp.idodp.toString()),
-                                  icon: BitmapDescriptor.defaultMarker,
-                                  position: odp.getLatLng(),
-                                  onTap: () {
-                                    _onODPMarkerTapped(odp.getLatLng());
-                                  },
-                                ),
-                              for (var order in orderData)
-                                Marker(
-                                  markerId: MarkerId(order.orderid.toString()),
-                                  icon: orderpin,
-                                  position: order.getLatLng(),
-                                  onTap: () {
-                                    _onOrderMarkerTapped(order.getLatLng());
-                                  },
-                                ),
-                              for (var survei in surveiData)
-                                Marker(
-                                  markerId:
-                                      MarkerId(survei.idsurvei.toString()),
-                                  icon: surveipin,
-                                  position: survei.getLatLng(),
-                                  onTap: () {
-                                    _onSurveiMarkerTapped(survei.getLatLng());
-                                  },
-                                ),
-                            },
-                            circles: <Circle>{
-                              Circle(
-                                circleId: CircleId('radarZone250m'),
-                                center: currentPosition!,
-                                radius: radarRadius250m,
-                                strokeWidth: 2,
-                                strokeColor: Colors.blue.withOpacity(0.5),
+                            for (var order in orderData)
+                              Marker(
+                                markerId: MarkerId(order.orderid.toString()),
+                                icon: orderpin,
+                                position: order.getLatLng(),
+                                onTap: () {
+                                  _onOrderMarkerTapped(order.getLatLng());
+                                },
                               ),
-                              Circle(
-                                circleId: CircleId('radarZone500m'),
-                                center: currentPosition!,
-                                radius: radarRadius500m,
-                                strokeWidth: 2,
-                                strokeColor: Colors.red.withOpacity(0.5),
+                            for (var survei in surveiData)
+                              Marker(
+                                markerId: MarkerId(survei.idsurvei.toString()),
+                                icon: surveipin,
+                                position: survei.getLatLng(),
+                                onTap: () {
+                                  _onSurveiMarkerTapped(survei.getLatLng());
+                                },
                               ),
-                              Circle(
-                                circleId: CircleId('radarZone750m'),
-                                center: currentPosition!,
-                                radius: radarRadius750m,
-                                strokeWidth: 2,
-                                strokeColor: Colors.red.withOpacity(0.5),
-                              ),
-                              Circle(
-                                circleId: CircleId('radarZone1000m'),
-                                center: currentPosition!,
-                                radius: radarRadius1000m,
-                                strokeWidth: 2,
-                                strokeColor: Colors.red.withOpacity(0.5),
-                              ),
-                            },
-                            polylines: <Polyline>{
-                              if (polylineCoordinates.isNotEmpty)
-                                Polyline(
-                                  polylineId: PolylineId('routeToODP'),
-                                  points: polylineCoordinates,
-                                  color: Colors.green,
-                                  width: 5,
-                                ),
-                              Polyline(
-                                polylineId: PolylineId('horizontalLine'),
-                                points: [
-                                  LatLng(currentPosition!.latitude,
-                                      currentPosition!.longitude - 0.01),
-                                  LatLng(currentPosition!.latitude,
-                                      currentPosition!.longitude + 0.01),
-                                ],
-                                color: Colors.black,
-                                width: 2,
-                              ),
-                            },
-                            polygons: <Polygon>{
-                              Polygon(
-                                polygonId: PolygonId('northSemiCircle250m500m'),
-                                points: _createSemiCircle(
-                                    currentPosition!, 250, 500, true),
-                                fillColor: Colors.blue.withOpacity(0.3),
-                                strokeColor: Colors.blue.withOpacity(0.5),
-                                strokeWidth: 2,
-                              ),
-                              // Polygon(
-                              //   polygonId: PolygonId('southSemiCircle250m500m'),
-                              //   points: _createSemiCircle(currentPosition!, 250, 500, false),
-                              //   fillColor: Colors.blue.withOpacity(0.3),
-                              //   strokeColor: Colors.blue.withOpacity(0.5),
-                              //   strokeWidth: 2,
-                              // ),
-                              // Polygon(
-                              //   polygonId: PolygonId('northSemiCircle500m750m'),
-                              //   points: _createSemiCircle(currentPosition!, 500, 750, true),
-                              //   fillColor: Colors.red.withOpacity(0.3),
-                              //   strokeColor: Colors.red.withOpacity(0.5),
-                              //   strokeWidth: 2,
-                              // ),
-                              // Polygon(
-                              //   polygonId: PolygonId('southSemiCircle500m750m'),
-                              //   points: _createSemiCircle(currentPosition!, 500, 750, false),
-                              //   fillColor: Colors.red.withOpacity(0.3),
-                              //   strokeColor: Colors.red.withOpacity(0.5),
-                              //   strokeWidth: 2,
-                              // ),
-                            },
-                          ),
-                        Positioned(
-                          top: 16.0,
-                          left: MediaQuery.of(context).size.width *
-                              0.1, // 10% from the left
-                          right: MediaQuery.of(context).size.width *
-                              0.1, // 10% from the right
-                          child: Container(
-                            height: MediaQuery.of(context).size.height *
-                                0.1, // 10% of the screen height
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10.0),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Colors.black26,
-                                  blurRadius: 5.0,
-                                  spreadRadius: 2.0,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
+                          },
+                          circles: <Circle>{
+                            Circle(
+                              circleId: CircleId('radarZone250m'),
+                              center: currentPosition!,
+                              radius: radarRadius250m,
+                              strokeWidth: 2,
+                              strokeColor: Colors.blue.withOpacity(0.5),
                             ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16.0),
-                                    child: TextField(
-                                      controller: _searchController,
-                                      decoration: InputDecoration(
-                                        hintText: 'Lat,Lng (-1.2345,3.4567)',
-                                        hintStyle: TextStyle(
-                                          fontSize: isMobile
-                                              ? 14
-                                              : 18, // Ukuran font dinamis
-                                        ),
-                                        border: OutlineInputBorder(),
+                            Circle(
+                              circleId: CircleId('radarZone500m'),
+                              center: currentPosition!,
+                              radius: radarRadius500m,
+                              strokeWidth: 2,
+                              strokeColor: Colors.red.withOpacity(0.5),
+                            ),
+                            Circle(
+                              circleId: CircleId('radarZone750m'),
+                              center: currentPosition!,
+                              radius: radarRadius750m,
+                              strokeWidth: 2,
+                              strokeColor: Colors.red.withOpacity(0.5),
+                            ),
+                            Circle(
+                              circleId: CircleId('radarZone1000m'),
+                              center: currentPosition!,
+                              radius: radarRadius1000m,
+                              strokeWidth: 2,
+                              strokeColor: Colors.red.withOpacity(0.5),
+                            ),
+                          },
+                          polylines: <Polyline>{
+                            if (polylineCoordinates.isNotEmpty)
+                              Polyline(
+                                polylineId: PolylineId('routeToODP'),
+                                points: polylineCoordinates,
+                                color: Colors.green,
+                                width: 5,
+                              ),
+                            Polyline(
+                              polylineId: PolylineId('horizontalLine'),
+                              points: [
+                                LatLng(currentPosition!.latitude,
+                                    currentPosition!.longitude - 0.01),
+                                LatLng(currentPosition!.latitude,
+                                    currentPosition!.longitude + 0.01),
+                              ],
+                              color: Colors.black,
+                              width: 2,
+                            ),
+                          },
+                          polygons: _buildPolygons(),
+                        ),
+                      Positioned(
+                        top: 16.0,
+                        left: MediaQuery.of(context).size.width *
+                            0.1, // 10% from the left
+                        right: MediaQuery.of(context).size.width *
+                            0.1, // 10% from the right
+                        child: Container(
+                          height: MediaQuery.of(context).size.height *
+                              0.1, // 10% of the screen height
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10.0),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 5.0,
+                                spreadRadius: 2.0,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16.0),
+                                  child: TextField(
+                                    controller: _searchController,
+                                    decoration: InputDecoration(
+                                      hintText: 'Lat,Lng (-1.2345,3.4567)',
+                                      hintStyle: TextStyle(
+                                        fontSize: isMobile
+                                            ? 14
+                                            : 18, // Ukuran font dinamis
                                       ),
+                                      border: OutlineInputBorder(),
                                     ),
                                   ),
                                 ),
-                                IconButton(
-                                  onPressed: _handleSearch,
-                                  icon: const Icon(Icons.search),
-                                ),
-                              ],
-                            ),
+                              ),
+                              IconButton(
+                                onPressed: _handleSearch,
+                                icon: const Icon(Icons.search),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
+                      Positioned(
+                        bottom: 90,
+                        left: MediaQuery.of(context).size.width * 0.05,
+                        child: Text(
+                          'List Wilayah Promosi',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 20,
+                        left: 5,
+                        child: SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.1,
+                          width: MediaQuery.of(context).size.width * 0.9,
+                          child: Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.arrow_back_ios,
+                                    size: 16, color: Colors.grey[800]),
+                                onPressed: _scrollLeft,
+                              ),
+                              Expanded(
+                                child: ListView.builder(
+                                  controller: _scrollController,
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount:
+                                      8, // Ganti dengan jumlah data yang sesuai
+                                  itemBuilder: (context, index) {
+                                    return Container(
+                                      margin: EdgeInsets.only(right: 10),
+                                      height:
+                                          MediaQuery.of(context).size.height *
+                                              0.1,
+                                      width: 100,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius:
+                                            BorderRadius.circular(10.0),
+                                        boxShadow: const [
+                                          BoxShadow(
+                                            color: Colors.black26,
+                                            blurRadius: 5.0,
+                                            spreadRadius: 2.0,
+                                            offset: Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Center(
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
+                                          children: [
+                                            Text("Nama Alternatif"),
+                                            Text('cek wilayah'),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.arrow_forward_ios,
+                                    size: 16, color: Colors.grey[800]),
+                                onPressed: _scrollRight,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ]),
+                  )
                 ],
               ),
             ),
           ],
+        ),
+        floatingActionButton: Container(
+          margin: EdgeInsets.only(bottom: 80.0),
+          child: FloatingActionButton(
+            onPressed: () {
+              if (userPosition != null) {
+                _moveToLocation(userPosition!);
+              }
+            },
+            backgroundColor: Colors.grey[800],
+            child: const Icon(Icons.gps_fixed),
+          ),
         ),
       );
     }

@@ -13,10 +13,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 import 'package:location/location.dart';
-import 'package:webui/controller/inputan_controller.dart';
 import 'package:webui/controller/layout/layout_controller.dart';
 import 'package:webui/controller/odp_controller.dart';
-import 'package:webui/controller/survei_controller.dart';
 import 'package:webui/helper/services/auth_service.dart';
 import 'package:webui/helper/storage/local_storage.dart';
 import 'package:webui/helper/theme/admin_theme.dart';
@@ -28,9 +26,7 @@ import 'package:webui/helper/widgets/my_container.dart';
 import 'package:webui/helper/widgets/my_dashed_divider.dart';
 import 'package:webui/helper/widgets/my_spacing.dart';
 import 'package:webui/helper/widgets/my_text.dart';
-import 'package:webui/models/inputan_data.dart';
 import 'package:webui/models/odp_data.dart';
-import 'package:webui/models/survei_data.dart';
 import 'package:webui/views/directions.dart';
 import 'package:webui/views/layout/left_bar.dart';
 import 'package:webui/views/layout/top_bar.dart';
@@ -52,28 +48,15 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
   List<ODP> odpData = [];
   LatLng? nearestODPPosition;
   LatLng? selectedODPPosition;
-  LatLng? selectedSurveiPosition;
-  LatLng? selectedOrderPosition;
   List<LatLng> polylineCoordinates = [];
   late BitmapDescriptor personIcon;
   bool checkhighway = false;
   bool isRecommended = false;
   List<String> roadRoutesNames = [];
   List<dynamic> odpInRadius = [];
-  List<dynamic> orderInRadius = [];
-  List<dynamic> surveiInRadius = [];
-
-  late BitmapDescriptor surveipin;
-  late BitmapDescriptor orderpin;
-  late InputanController orderController;
-  late SurveiController surveiController;
-  List<Survei> surveiData = [];
-  List<Inputan> orderData = [];
-
   static const double radarRadius250m = 250;
-  static const double radarRadius1000m = 1000;
-  static const double radarRadius500m = 500;
-  static const double radarRadius750m = 750;
+  List<dynamic> recommendations = [];
+  LatLng? lastMarkerPosition;
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -81,11 +64,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
   void initState() {
     super.initState();
     _loadPersonIcon();
-    _loadSurvei();
-    _loadOrder();
     odpController = Get.put(ODPController());
-    orderController = Get.put(InputanController());
-    surveiController = Get.put(SurveiController());
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await fetchLocationUpdates();
       await loadODPData();
@@ -112,9 +91,11 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
     locationController.onLocationChanged.listen((LocationData currentLocation) {
       if (mounted) {
         setState(() {
-          currentPosition =
-              LatLng(currentLocation.latitude!, currentLocation.longitude!);
-          userPosition = currentPosition;
+          if (lastMarkerPosition == null) {
+            currentPosition =
+                LatLng(currentLocation.latitude!, currentLocation.longitude!);
+            userPosition = currentPosition;
+          }
         });
       }
     });
@@ -122,12 +103,8 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
 
   Future<void> loadODPData() async {
     await odpController.getAllODP();
-    await orderController.getAllOrder();
-    await surveiController.getAllSurvei();
     setState(() {
       odpData = odpController.semuaODP;
-      orderData = orderController.semuaInputan;
-      surveiData = surveiController.allSurvei;
     });
   }
 
@@ -136,9 +113,6 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
 
     double closestDistance = double.infinity;
     LatLng closestODP = odpData.first.getLatLng();
-    odpInRadius.clear(); // Clear previous data
-    orderInRadius.clear(); // Clear previous data
-    surveiInRadius.clear();
 
     for (var odp in odpData) {
       LatLng odpPosition = odp.getLatLng();
@@ -149,51 +123,6 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
         closestDistance = distance;
         closestODP = odpPosition;
       }
-
-      // Add ODPs within 250m radius
-      if (distance <= radarRadius250m) {
-        _getPolyline(currentPosition!, odpPosition).then((_) {
-          odpInRadius.add({
-            'idodp': odp.idodp,
-            'namaodp': odp.namaodp,
-            'kategori': odp.kategori,
-            'latitude': odp.latitude,
-            'longitude': odp.longitude,
-            'jarak': distance,
-            'checkhighway': checkhighway,
-          });
-        });
-      }
-
-      // Check orders within 1000m radius
-      for (var order in orderData) {
-        LatLng orderPosition = LatLng(order.latitude, order.longitude);
-        double orderDistance =
-            calculateDistance(currentPosition!, orderPosition);
-
-        if (orderDistance <= radarRadius1000m) {
-          orderInRadius.add({
-            'orderid': order.orderid,
-            'namaperusahaan': order.namaperusahaan,
-            'paket': order.paket
-          });
-        }
-      }
-
-      // Check surveis within 1000m radius
-      for (var survei in surveiData) {
-        LatLng surveiPosition = LatLng(survei.latitude, survei.longitude);
-        double surveiDistance =
-            calculateDistance(currentPosition!, surveiPosition);
-
-        if (surveiDistance <= radarRadius1000m) {
-          surveiInRadius.add({
-            'idsurvei': survei.idsurvei,
-            'namausaha': survei.namausaha,
-            'jenisusaha': survei.jenisusaha
-          });
-        }
-      }
     }
 
     setState(() {
@@ -202,7 +131,34 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
         _getPolyline(currentPosition!, nearestODPPosition!);
       }
     });
-    await recommendedProcess(odpInRadius, currentPosition!);
+    detectDataInRadius();
+  }
+
+  void detectDataInRadius() {
+    if (currentPosition == null) return;
+
+    // Initialize odpInRadius list
+    odpInRadius.clear();
+
+    // Loop through each ODP and add those within the 250m radius
+    for (var item in odpData) {
+      LatLng position = item.getLatLng();
+      double distance = calculateDistance(currentPosition!, position);
+
+      if (distance <= 250) {
+        odpInRadius.add({
+          'idodp': item.idodp,
+          'namaodp': item.namaodp,
+          'kategori': item.kategori,
+          'latitude': item.latitude,
+          'longitude': item.longitude,
+          'jarak': distance,
+          'checkhighway': checkhighway, // Ensure checkhighway is correctly set
+        });
+      }
+    }
+
+    recommendedProcess(odpInRadius, currentPosition);
   }
 
   Future<void> _getPolyline(LatLng origin, LatLng destination) async {
@@ -282,13 +238,15 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
       }
     }
 
-    for (var recommendation in odpInRadius) {
-      if (selectedODP != null &&
-          recommendation['namaodp'] == selectedODP.namaodp) {
-        isRecommended = true;
-        break;
-      }
+    if (selectedODP != null) {
+      isRecommended = recommendations.any((recommendation) =>
+          recommendation['namaodp'] == selectedODP?.namaodp);
+    } else {
+      isRecommended = false;
     }
+
+    // Debugging: Print isRecommended status
+    print('isRecommended: $isRecommended');
 
     if (selectedODPPosition == position) {
       if (selectedODP != null) {
@@ -311,6 +269,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
         _getPolyline(currentPosition!, position);
       }
     }
+    detectDataInRadius();
   }
 
   void _scrollToSelectedODP(int idodp) {
@@ -324,12 +283,12 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
 
   Future<void> recommendedProcess(
       List<dynamic> odpInRadius, LatLng? currentPosition) async {
-    // URL backend (ganti dengan URL backend Anda)
+    // URL backend (replace with your backend URL)
     String backendUrl =
         'https://xj9wv6w0-3000.asse.devtunnels.ms/recommend/processrecommend';
 
     try {
-      // Tambahkan data currentPosition ke dalam payload
+      // Add currentPosition data to the payload
       Map<String, dynamic> payload = {
         'currentPosition': {
           'latitude': currentPosition!.latitude,
@@ -338,7 +297,10 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
         'odpInRadius': odpInRadius,
       };
 
-      // Kirim permintaan POST ke backend
+      // Clear previous recommendations
+      recommendations.clear();
+
+      // Send POST request to backend
       http.Response response = await http.post(
         Uri.parse(backendUrl),
         headers: {
@@ -351,21 +313,26 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
       if (response.statusCode == 200) {
         // Parse JSON response
         var responseData = jsonDecode(response.body);
-        List<dynamic> recommendations = responseData['recommendations'];
+        recommendations = List<dynamic>.from(responseData['recommendations']);
+        // Filter out data with 'kategori' as 'hitam'
+        recommendations = recommendations
+            .where((item) => item['kategori'] != 'HITAM')
+            .map((item) {
+          return {
+            'idodp': item['idodp'],
+            'namaodp': item['nama'],
+            'kategori': item['kategori'],
+            'jarak': item['jarak'],
+            'similarity': item['similarity'],
+            'highway': item['highway'],
+            'distanceScore': item['distanceScore'],
+            'categoryScore': item['categoryScore'],
+            'latitude': item['latitude'],
+            'longitude': item['longitude']
+          };
+        }).toList();
 
-        // Clear previous data and populate odpInRadius
-        odpInRadius.clear();
-        for (var recommendation in recommendations) {
-          odpInRadius.add({
-            'namaodp': recommendation['namaodp'],
-            'kategori': recommendation['kategori'],
-            'jarak': recommendation['jarak'],
-            // Add other fields as needed
-          });
-        }
-
-        // Sort odpInRadius or handle as needed
-        odpInRadius.sort((a, b) => a['jarak'].compareTo(b['jarak']));
+        print(recommendations);
       } else {
         print(
             'Failed to send data. Error ${response.statusCode}: ${response.reasonPhrase}');
@@ -423,38 +390,6 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
     }
   }
 
-  void _loadSurvei() async {
-    try {
-      final ByteData byteData = await rootBundle.load('assets/images/pin1.png');
-      final Uint8List list = byteData.buffer.asUint8List();
-
-      final resizedImageData = await _resizeImage(list, 40);
-
-      setState(() {
-        surveipin = BitmapDescriptor.fromBytes(resizedImageData);
-      });
-    } catch (e) {
-      print('Error loading or resizing person icon: $e');
-      // Handle error, e.g., show default icon or retry loading
-    }
-  }
-
-  void _loadOrder() async {
-    try {
-      final ByteData byteData = await rootBundle.load('assets/images/pin2.png');
-      final Uint8List list = byteData.buffer.asUint8List();
-
-      final resizedImageData = await _resizeImage(list, 40);
-
-      setState(() {
-        orderpin = BitmapDescriptor.fromBytes(resizedImageData);
-      });
-    } catch (e) {
-      print('Error loading or resizing person icon: $e');
-      // Handle error, e.g., show default icon or retry loading
-    }
-  }
-
   Future<Uint8List> _resizeImage(Uint8List data, int size) async {
     try {
       final img.Image? image = img.decodeImage(data);
@@ -489,6 +424,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
       _resetPolyline();
     });
     _findNearestODP();
+    detectDataInRadius();
   }
 
   void _handleSearch() {
@@ -499,6 +435,8 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
         double lat = double.tryParse(coordinates[0]) ?? 0.0;
         double lng = double.tryParse(coordinates[1]) ?? 0.0;
         _moveToLocation(LatLng(lat, lng));
+        _findNearestODP();
+        detectDataInRadius();
       } else {
         // Handle invalid input format
         print('Invalid input format. Please enter "lat,lng".');
@@ -579,21 +517,31 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
           children: [
             if (currentPosition != null)
               GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: currentPosition ?? LatLng(0, 0),
+                  zoom: 14.0,
+                ),
                 onMapCreated: (GoogleMapController controller) {
                   _controller.complete(controller);
+                  if (currentPosition != null) {
+                    _moveToLocation(currentPosition!);
+                  }
                 },
-                initialCameraPosition:
-                    CameraPosition(target: currentPosition!, zoom: 17),
-                markers: <Marker>{
-                  Marker(
-                    markerId: const MarkerId('currentLocation'),
-                    icon: personIcon,
-                    position: currentPosition!,
-                    draggable: true,
-                    onDragEnd: (newPosition) {
-                      _moveToLocation(newPosition);
-                    },
-                  ),
+                markers: {
+                  if (currentPosition != null)
+                    Marker(
+                      markerId: const MarkerId('currentLocation'),
+                      icon: personIcon,
+                      position: currentPosition!,
+                      draggable: true,
+                      onDragEnd: (newPosition) {
+                        setState(() {
+                          lastMarkerPosition = newPosition;
+                          currentPosition = newPosition;
+                        });
+                        _moveToLocation(newPosition);
+                      },
+                    ),
                   for (var odp in odpData)
                     Marker(
                       markerId: MarkerId(odp.idodp.toString()),
@@ -612,27 +560,6 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                     strokeWidth: 2,
                     strokeColor: Colors.blue.withOpacity(0.5),
                     fillColor: Colors.blue.withOpacity(0.2),
-                  ),
-                  Circle(
-                    circleId: CircleId('radarZone500m'),
-                    center: currentPosition!,
-                    radius: radarRadius500m,
-                    strokeWidth: 2,
-                    strokeColor: Colors.red.withOpacity(0.5),
-                  ),
-                  Circle(
-                    circleId: CircleId('radarZone750m'),
-                    center: currentPosition!,
-                    radius: radarRadius750m,
-                    strokeWidth: 2,
-                    strokeColor: Colors.red.withOpacity(0.5),
-                  ),
-                  Circle(
-                    circleId: CircleId('radarZone1000m'),
-                    center: currentPosition!,
-                    radius: radarRadius1000m,
-                    strokeWidth: 2,
-                    strokeColor: Colors.red.withOpacity(0.5),
                   ),
                 },
                 polylines: <Polyline>{
@@ -713,9 +640,10 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                       child: ListView.builder(
                         controller: _scrollController,
                         scrollDirection: Axis.horizontal,
-                        itemCount: odpInRadius.length,
+                        itemCount:
+                            recommendations.length, // Use recommendations here
                         itemBuilder: (context, index) {
-                          final recommendation = odpInRadius[index];
+                          final recommendation = recommendations[index];
                           final odpDetail = odpData.firstWhere(
                               (odp) => odp.idodp == recommendation['idodp']);
 
@@ -723,22 +651,20 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                             onTap: () {
                               if (_lastClickedIndex == index) {
                                 _showPointDetails(
-                                    context,
-                                    odpDetail.namaodp,
-                                    odpDetail.kapasitas.toString(),
-                                    odpDetail.isi.toString(),
-                                    odpDetail.kosong.toString(),
-                                    odpDetail.reserved.toString(),
-                                    odpDetail.kategori,
-                                    isRecommended);
-                                _moveToLocation(LatLng(
-                                    odpDetail.latitude, odpDetail.longitude));
+                                  context,
+                                  odpDetail.namaodp,
+                                  odpDetail.kapasitas.toString(),
+                                  odpDetail.isi.toString(),
+                                  odpDetail.kosong.toString(),
+                                  odpDetail.reserved.toString(),
+                                  odpDetail.kategori,
+                                  isRecommended,
+                                );
                               } else {
                                 _updatePolyline(LatLng(
-                                    recommendation['latitude'],
-                                    recommendation['longitude']));
-                                _moveToLocation(LatLng(
-                                    odpDetail.latitude, odpDetail.longitude));
+                                  recommendation['latitude'],
+                                  recommendation['longitude'],
+                                ));
                                 _lastClickedIndex = index;
                               }
                             },
@@ -763,18 +689,17 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Text(
-                                    '${odpDetail.namaodp}',
+                                    '${recommendation['namaodp']}',
                                     style: TextStyle(fontSize: 12),
                                   ),
                                   Text(
-                                    '(${odpDetail.kategori})',
+                                    '${recommendation['kategori']}',
                                     style: TextStyle(fontSize: 10),
                                   ),
                                   Text(
                                     'Jarak: ${recommendation['jarak'].toStringAsFixed(2)} meter',
                                     style: TextStyle(fontSize: 10),
                                   ),
-                                  // Add other fields as needed
                                 ],
                               ),
                             ),
@@ -799,6 +724,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
             onPressed: () {
               if (userPosition != null) {
                 _moveToLocation(userPosition!);
+                _findNearestODP();
               }
             },
             backgroundColor: Colors.grey[800],
@@ -820,21 +746,31 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                       children: [
                         if (currentPosition != null)
                           GoogleMap(
+                            initialCameraPosition: CameraPosition(
+                              target: currentPosition ?? LatLng(0, 0),
+                              zoom: 14.0,
+                            ),
                             onMapCreated: (GoogleMapController controller) {
                               _controller.complete(controller);
+                              if (currentPosition != null) {
+                                _moveToLocation(currentPosition!);
+                              }
                             },
-                            initialCameraPosition: CameraPosition(
-                                target: currentPosition!, zoom: 17),
-                            markers: <Marker>{
-                              Marker(
-                                markerId: const MarkerId('currentLocation'),
-                                icon: personIcon,
-                                position: currentPosition!,
-                                draggable: true,
-                                onDragEnd: (newPosition) {
-                                  _moveToLocation(newPosition);
-                                },
-                              ),
+                            markers: {
+                              if (currentPosition != null)
+                                Marker(
+                                  markerId: const MarkerId('currentLocation'),
+                                  icon: personIcon,
+                                  position: currentPosition!,
+                                  draggable: true,
+                                  onDragEnd: (newPosition) {
+                                    setState(() {
+                                      lastMarkerPosition = newPosition;
+                                      currentPosition = newPosition;
+                                    });
+                                    _moveToLocation(newPosition);
+                                  },
+                                ),
                               for (var odp in odpData)
                                 Marker(
                                   markerId: MarkerId(odp.idodp.toString()),
@@ -853,27 +789,6 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                                 strokeWidth: 2,
                                 strokeColor: Colors.blue.withOpacity(0.5),
                                 fillColor: Colors.blue.withOpacity(0.2),
-                              ),
-                              Circle(
-                                circleId: CircleId('radarZone500m'),
-                                center: currentPosition!,
-                                radius: radarRadius500m,
-                                strokeWidth: 2,
-                                strokeColor: Colors.red.withOpacity(0.5),
-                              ),
-                              Circle(
-                                circleId: CircleId('radarZone750m'),
-                                center: currentPosition!,
-                                radius: radarRadius750m,
-                                strokeWidth: 2,
-                                strokeColor: Colors.red.withOpacity(0.5),
-                              ),
-                              Circle(
-                                circleId: CircleId('radarZone1000m'),
-                                center: currentPosition!,
-                                radius: radarRadius1000m,
-                                strokeWidth: 2,
-                                strokeColor: Colors.red.withOpacity(0.5),
                               ),
                             },
                             polylines: <Polyline>{
@@ -956,9 +871,10 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                                   child: ListView.builder(
                                     controller: _scrollController,
                                     scrollDirection: Axis.horizontal,
-                                    itemCount: odpInRadius.length,
+                                    itemCount: recommendations.length,
                                     itemBuilder: (context, index) {
-                                      final recommendation = odpInRadius[index];
+                                      final recommendation =
+                                          recommendations[index];
                                       final odpDetail = odpData.firstWhere(
                                           (odp) =>
                                               odp.idodp ==
@@ -968,18 +884,20 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                                         onTap: () {
                                           if (_lastClickedIndex == index) {
                                             _showPointDetails(
-                                                context,
-                                                odpDetail.namaodp,
-                                                odpDetail.kapasitas.toString(),
-                                                odpDetail.isi.toString(),
-                                                odpDetail.kosong.toString(),
-                                                odpDetail.reserved.toString(),
-                                                odpDetail.kategori,
-                                                isRecommended);
+                                              context,
+                                              odpDetail.namaodp,
+                                              odpDetail.kapasitas.toString(),
+                                              odpDetail.isi.toString(),
+                                              odpDetail.kosong.toString(),
+                                              odpDetail.reserved.toString(),
+                                              odpDetail.kategori,
+                                              isRecommended,
+                                            );
                                           } else {
                                             _updatePolyline(LatLng(
-                                                recommendation['latitude'],
-                                                recommendation['longitude']));
+                                              recommendation['latitude'],
+                                              recommendation['longitude'],
+                                            ));
                                             _lastClickedIndex = index;
                                           }
                                         },
@@ -1003,26 +921,30 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                                               ),
                                             ],
                                           ),
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.center,
-                                            children: [
-                                              Text(
-                                                '${odpDetail.namaodp}',
-                                                style: TextStyle(fontSize: 12),
-                                              ),
-                                              Text(
-                                                '(${odpDetail.kategori})',
-                                                style: TextStyle(fontSize: 10),
-                                              ),
-                                              Text(
-                                                'Jarak: ${recommendation['jarak'].toStringAsFixed(2)} meter',
-                                                style: TextStyle(fontSize: 10),
-                                              ),
-                                              // Add other fields as needed
-                                            ],
+                                          child: Center(
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  '${recommendation['namaodp']}',
+                                                  style:
+                                                      TextStyle(fontSize: 12),
+                                                ),
+                                                Text(
+                                                  '${recommendation['kategori']}',
+                                                  style:
+                                                      TextStyle(fontSize: 10),
+                                                ),
+                                                Text(
+                                                  'Jarak: ${recommendation['jarak'].toStringAsFixed(2)} meter',
+                                                  style:
+                                                      TextStyle(fontSize: 10),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                         ),
                                       );
@@ -1045,6 +967,19 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
               ),
             ),
           ],
+        ),
+        floatingActionButton: Container(
+          margin: EdgeInsets.only(bottom: 80.0),
+          child: FloatingActionButton(
+            onPressed: () {
+              if (userPosition != null) {
+                _moveToLocation(userPosition!);
+                _findNearestODP();
+              }
+            },
+            backgroundColor: Colors.grey[800],
+            child: const Icon(Icons.gps_fixed),
+          ),
         ),
       );
     }
@@ -1178,22 +1113,26 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                       ),
                     SizedBox(height: 10),
                     Text(
-                      'Saran : ',
+                      'Saran Wilayah Prioritas Promosi : ',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.black,
                         decoration: TextDecoration.none,
                       ),
                     ),
                     SizedBox(height: 5),
-                    Text(
-                      'Perlu peningkatan promosi paket A di wilayah ini',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        decoration: TextDecoration.none,
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/ordersurveimap');
+                      },
+                      child: Text(
+                        'Klik disini',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.none,
+                        ),
                       ),
                     ),
                     SizedBox(height: 10),
@@ -1317,22 +1256,26 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                       ),
                     SizedBox(height: 30),
                     Text(
-                      'Saran : ',
+                      'Saran Wilayah Prioritas Promosi : ',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.black,
                         decoration: TextDecoration.none,
                       ),
                     ),
                     SizedBox(height: 5),
-                    Text(
-                      'Perlu peningkatan promosi paket A di wilayah ini',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        decoration: TextDecoration.none,
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/ordersurveimap');
+                      },
+                      child: Text(
+                        'Klik disini',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.none,
+                        ),
                       ),
                     ),
                   ],

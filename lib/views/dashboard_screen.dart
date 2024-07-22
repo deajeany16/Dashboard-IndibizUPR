@@ -106,7 +106,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           contentTheme.blue,
                           Icons.folder_open,
                           'Data PS',
-                          '30',
+                          controller.dataPS.toString(),
                         ),
                       ),
                       // MyFlexItem(
