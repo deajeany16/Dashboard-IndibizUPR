@@ -100,8 +100,8 @@ class SurveiController extends MyController {
       (index) => Survei(
         0,
         'namausaha',
-        0.0, // Ganti nilai dengan default sesuai tipe data yang diinginkan
-        0.0, // Ganti nilai dengan default sesuai tipe data yang diinginkan
+        0.0,
+        0.0,
         'alamatusaha',
         'jenisusaha',
       ),
@@ -299,7 +299,7 @@ class SurveiController extends MyController {
     update();
   }
 
-  Future<void> deleteSurvei(int id) async {
+  Future<void> deleteSurvei(id) async {
     try {
       update();
       var surveiService = Get.put(SurveiService());

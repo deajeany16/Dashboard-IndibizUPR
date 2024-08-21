@@ -54,7 +54,7 @@ class _SurveiScreenState extends State<SurveiScreen>
   void _scrollToPage(int page) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        double offset = (page - 1) * 58.0; // 50 (button height) + 4*2 (margins)
+        double offset = (page - 1) * 58.0; 
         _scrollController.animateTo(
           offset,
           duration: Duration(milliseconds: 300),
@@ -323,18 +323,22 @@ class _SurveiScreenState extends State<SurveiScreen>
                                                 IconButton(
                                                   splashRadius: 20,
                                                   onPressed: () {
-                                                    CustomAlert(
+                                                    showDialog(
                                                       context: context,
-                                                      title: 'Hapus Data?',
-                                                      text:
-                                                          'Anda Yakin Ingin Menghapus Data?',
-                                                      confirmBtnColor: theme
-                                                          .colorScheme.error,
-                                                      showCancelText: true,
-                                                      onConfirmBtnTap: () =>
-                                                          controller
-                                                              .deleteSurvei(data
-                                                                  .idsurvei),
+                                                      builder: (context) =>
+                                                          CustomAlert(
+                                                        context: context,
+                                                        title: 'Hapus Data?',
+                                                        text:
+                                                            'Anda Yakin Ingin Menghapus Data?',
+                                                        confirmBtnColor: theme
+                                                            .colorScheme.error,
+                                                        showCancelText: true,
+                                                        onConfirmBtnTap: () =>
+                                                            controller
+                                                                .deleteSurvei(data
+                                                                    .idsurvei),
+                                                      ),
                                                     );
                                                   },
                                                   icon: Icon(Icons.delete,

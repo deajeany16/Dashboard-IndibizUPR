@@ -13,6 +13,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 import 'package:location/location.dart';
+import 'package:webui/controller/alternatif_controller.dart';
 import 'package:webui/controller/inputan_controller.dart';
 import 'package:webui/controller/odp_controller.dart';
 import 'package:webui/controller/survei_controller.dart';
@@ -24,6 +25,7 @@ import 'package:webui/helper/widgets/my_text.dart';
 import 'package:webui/models/inputan_data.dart';
 import 'package:webui/models/odp_data.dart';
 import 'package:webui/models/survei_data.dart';
+import 'package:webui/models/wpalternatif_data.dart';
 import 'package:webui/views/directions.dart';
 import 'package:webui/views/layout/left_bar.dart';
 import 'package:webui/views/layout/top_bar.dart';
@@ -81,6 +83,10 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
   List<String> polygonCodes = [];
   String? firstPolygonCode;
 
+  List<dynamic> alternativesData = [];
+  List<Alternatif> altData = [];
+  late AlternatifController altController;
+
   LatLng? lastMarkerPosition;
 
   final TextEditingController _searchController = TextEditingController();
@@ -94,6 +100,7 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
     odpController = Get.put(ODPController());
     orderController = Get.put(InputanController());
     surveiController = Get.put(SurveiController());
+    altController = Get.put(AlternatifController());
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await fetchLocationUpdates();
       await loadODPData();
@@ -126,7 +133,7 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
             userPosition = currentPosition;
           }
         });
-        detectDataInRadius();
+        // detectDataInRadius();
       }
     });
   }
@@ -135,10 +142,12 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
     await odpController.getAllODP();
     await orderController.getAllOrder();
     await surveiController.getAllSurvei();
+    await altController.getallAlternatif();
     setState(() {
       odpData = odpController.semuaODP;
       orderData = orderController.semuaInputan;
       surveiData = surveiController.allSurvei;
+      altData = altController.allAlternatif;
     });
   }
 
@@ -162,6 +171,7 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
         _getPolyline(currentPosition!, nearestODPPosition!);
       }
     });
+    detectDataInRadius();
   }
 
   Future<void> _getPolyline(LatLng origin, LatLng destination) async {
@@ -202,8 +212,8 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
         roadRoutesNames = cleanedRoadNames;
       });
 
-      print('Road names along the route: ${roadRoutesNames.join(', ')}');
-      print('Route includes highway: $checkhighway');
+      // print('Road names along the route: ${roadRoutesNames.join(', ')}');
+      // print('Route includes highway: $checkhighway');
     }
   }
 
@@ -261,6 +271,7 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
       if (currentPosition != null) {
         _getPolyline(currentPosition!, odpposition);
       }
+      detectDataInRadius();
     }
   }
 
@@ -289,6 +300,7 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
       if (currentPosition != null) {
         _getPolyline(currentPosition!, surveiposition);
       }
+      detectDataInRadius();
     }
   }
 
@@ -472,8 +484,15 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
         print('Data berhasil dikirim.');
         setState(() {
           var responseData = jsonDecode(response.body);
-          if (responseData['alternativesData'].isNotEmpty) {
-            firstPolygonCode = responseData['alternativesData'][0]['kode'];
+          if (responseData != null &&
+              responseData['data'] != null &&
+              responseData['data'].isNotEmpty) {
+            // Process the response data here
+            // For example, store the first alternative code in a variable
+            firstPolygonCode = responseData['data'][0]['kode'];
+
+            // Example of processing the complete response data
+            alternativesData = responseData['data'];
           }
         });
       } else {
@@ -486,31 +505,27 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
 
   void _loadPersonIcon() async {
     try {
-      final ByteData byteData =
-          await rootBundle.load('assets/images/person.png');
-      final Uint8List list = byteData.buffer.asUint8List();
-
-      final resizedImageData = await _resizeImage(list, 50);
-
-      setState(() {
-        personIcon = BitmapDescriptor.fromBytes(resizedImageData);
-      });
+      if (kIsWeb) {
+        personIcon = await BitmapDescriptor.fromAssetImage(
+            const ImageConfiguration(), 'assets/images/person.png');
+      } else {
+        personIcon = await BitmapDescriptor.fromAssetImage(
+            const ImageConfiguration(), 'assets/images/personMobi.png');
+      }
     } catch (e) {
       print('Error loading or resizing person icon: $e');
-      // Handle error, e.g., show default icon or retry loading
     }
   }
 
   void _loadSurvei() async {
     try {
-      final ByteData byteData = await rootBundle.load('assets/images/pin1.png');
-      final Uint8List list = byteData.buffer.asUint8List();
-
-      final resizedImageData = await _resizeImage(list, 40);
-
-      setState(() {
-        surveipin = BitmapDescriptor.fromBytes(resizedImageData);
-      });
+      if (kIsWeb) {
+        surveipin = await BitmapDescriptor.fromAssetImage(
+            const ImageConfiguration(), 'assets/images/pin1.png');
+      } else {
+        surveipin = await BitmapDescriptor.fromAssetImage(
+            const ImageConfiguration(), 'assets/images/pin1Mobi.png');
+      }
     } catch (e) {
       print('Error loading or resizing person icon: $e');
       // Handle error, e.g., show default icon or retry loading
@@ -519,14 +534,13 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
 
   void _loadOrder() async {
     try {
-      final ByteData byteData = await rootBundle.load('assets/images/pin2.png');
-      final Uint8List list = byteData.buffer.asUint8List();
-
-      final resizedImageData = await _resizeImage(list, 40);
-
-      setState(() {
-        orderpin = BitmapDescriptor.fromBytes(resizedImageData);
-      });
+      if (kIsWeb) {
+        orderpin = await BitmapDescriptor.fromAssetImage(
+            const ImageConfiguration(), 'assets/images/pin2.png');
+      } else {
+        orderpin = await BitmapDescriptor.fromAssetImage(
+            const ImageConfiguration(), 'assets/images/pin2Mobi.png');
+      }
     } catch (e) {
       print('Error loading or resizing person icon: $e');
       // Handle error, e.g., show default icon or retry loading
@@ -567,6 +581,7 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
       _resetPolyline();
     });
     _findNearestODP();
+    detectDataInRadius();
   }
 
   void _handleSearch() {
@@ -694,6 +709,12 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
     return polygons;
   }
 
+  void _updatePolygon(String kode) {
+    setState(() {
+      firstPolygonCode = kode;
+    });
+  }
+
   int _lastClickedIndex = -1;
   final ScrollController _scrollController = ScrollController();
 
@@ -743,6 +764,7 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
               onChange: (_) {},
               offsetX: -90,
               offsetY: 4,
+              // ignore: no_wildcard_variable_uses
               hideFn: (_) => accountHideFn = _,
               menu: Padding(
                 padding: MySpacing.xy(8, 8),
@@ -771,7 +793,7 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
                   _controller.complete(controller);
                 },
                 initialCameraPosition:
-                    CameraPosition(target: currentPosition!, zoom: 17),
+                    CameraPosition(target: currentPosition!, zoom: 15),
                 markers: <Marker>{
                   Marker(
                     markerId: const MarkerId('currentLocation'),
@@ -903,6 +925,135 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
                 ),
               ),
             ),
+            Positioned(
+              bottom: 120,
+              left: MediaQuery.of(context).size.width * 0.05,
+              child: Text(
+                'List Wilayah Promosi',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ),
+            Positioned(
+              bottom: 20,
+              left: 5,
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height *
+                    0.2, 
+                width: MediaQuery.of(context).size.width * 0.8,
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.arrow_back_ios,
+                          size: 16, color: Colors.grey[800]),
+                      onPressed: _scrollLeft,
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        scrollDirection: Axis.horizontal,
+                        itemCount: alternativesData.length,
+                        itemBuilder: (context, index) {
+                          final alternative = alternativesData[index];
+                          final criteria = alternative['criteria'] ?? {};
+
+                          return GestureDetector(
+                            onTap: () {
+                              if (_lastClickedIndex == index) {
+                                _updatePolygon(alternative['kode']);
+                              } else {
+                                setState(() {
+                                  _lastClickedIndex = index;
+                                });
+                              }
+                            },
+                            child: Container(
+                              margin: EdgeInsets.only(right: 10),
+                              height: MediaQuery.of(context).size.height *
+                                  0.2, // Adjusted height
+                              width: 200, // Increased width to fit more content
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10.0),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 5.0,
+                                    spreadRadius: 2.0,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                        left: 8, right: 8),
+                                    child: Text(
+                                      alternative['namaalternatif'] ??
+                                          'Nama Alternatif',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8.0),
+                                    child: Text(
+                                      'Total Usaha: ${criteria['totalUsaha'] ?? '-'}',
+                                      style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey[700]),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8.0),
+                                    child: Text(
+                                      'Jenis Usaha Terbanyak: ${criteria['jenisUsahaTerbanyak'] ?? '-'}',
+                                      style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey[700]),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8.0),
+                                    child: Text(
+                                      'Total ODP: ${criteria['totalODP'] ?? '-'}',
+                                      style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey[700]),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8.0),
+                                    child: Text(
+                                      'Kategori Terbanyak: ${criteria['kategoriTerbanyak'] ?? '-'}',
+                                      style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey[700]),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.arrow_forward_ios,
+                          size: 16, color: Colors.grey[800]),
+                      onPressed: _scrollRight,
+                    ),
+                  ],
+                ),
+              ),
+            )
           ],
         ),
         floatingActionButton: Container(
@@ -948,6 +1099,7 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
                                   currentPosition = newPosition;
                                 });
                                 _moveToLocation(newPosition);
+                                _resetPolyline();
                               },
                             ),
                             for (var odp in odpData)
@@ -1080,20 +1232,21 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
                         ),
                       ),
                       Positioned(
-                        bottom: 90,
+                        bottom: 150,
                         left: MediaQuery.of(context).size.width * 0.05,
                         child: Text(
                           'List Wilayah Promosi',
                           style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
+                              fontSize: 14, fontWeight: FontWeight.bold),
                         ),
                       ),
                       Positioned(
                         bottom: 20,
                         left: 5,
                         child: SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.1,
-                          width: MediaQuery.of(context).size.width * 0.9,
+                          height: MediaQuery.of(context).size.height *
+                              0.1, // Increased height to accommodate criteria
+                          width: MediaQuery.of(context).size.width * 0.7,
                           child: Row(
                             children: [
                               IconButton(
@@ -1105,37 +1258,105 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
                                 child: ListView.builder(
                                   controller: _scrollController,
                                   scrollDirection: Axis.horizontal,
-                                  itemCount:
-                                      8, // Ganti dengan jumlah data yang sesuai
+                                  itemCount: alternativesData.length,
                                   itemBuilder: (context, index) {
-                                    return Container(
-                                      margin: EdgeInsets.only(right: 10),
-                                      height:
-                                          MediaQuery.of(context).size.height *
-                                              0.1,
-                                      width: 100,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius:
-                                            BorderRadius.circular(10.0),
-                                        boxShadow: const [
-                                          BoxShadow(
-                                            color: Colors.black26,
-                                            blurRadius: 5.0,
-                                            spreadRadius: 2.0,
-                                            offset: Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Center(
+                                    final alternative = alternativesData[index];
+                                    final criteria =
+                                        alternative['criteria'] ?? {};
+
+                                    return InkWell(
+                                      onTap: () {
+                                        if (_lastClickedIndex == index) {
+                                          _updatePolygon(alternative['kode']);
+                                        } else {
+                                          setState(() {
+                                            _lastClickedIndex = index;
+                                          });
+                                        }
+                                      },
+                                      child: Container(
+                                        margin: EdgeInsets.only(right: 10),
+                                        height:
+                                            MediaQuery.of(context).size.height *
+                                                0.2, // Adjusted height
+                                        width:
+                                            200, // Increased width to fit more content
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(10.0),
+                                          boxShadow: const [
+                                            BoxShadow(
+                                              color: Colors.black26,
+                                              blurRadius: 5.0,
+                                              spreadRadius: 2.0,
+                                              offset: Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
                                         child: Column(
                                           mainAxisAlignment:
                                               MainAxisAlignment.center,
                                           crossAxisAlignment:
-                                              CrossAxisAlignment.center,
+                                              CrossAxisAlignment.start,
                                           children: [
-                                            Text("Nama Alternatif"),
-                                            Text('cek wilayah'),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.all(8.0),
+                                              child: Text(
+                                                alternative['namaalternatif'] ??
+                                                    'Nama Alternatif',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 8.0),
+                                              child: Text(
+                                                'Total Usaha: ${criteria['totalUsaha'] ?? '-'}',
+                                                style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[700]),
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 8.0),
+                                              child: Text(
+                                                'Jenis Usaha Terbanyak: ${criteria['jenisUsahaTerbanyak'] ?? '-'}',
+                                                style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[700]),
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 8.0),
+                                              child: Text(
+                                                'Total ODP: ${criteria['totalODP'] ?? '-'}',
+                                                style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[700]),
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 8.0),
+                                              child: Text(
+                                                'Kategori Terbanyak: ${criteria['kategoriTerbanyak'] ?? '-'}',
+                                                style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[700]),
+                                              ),
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -1151,7 +1372,7 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
                             ],
                           ),
                         ),
-                      ),
+                      )
                     ]),
                   )
                 ],
@@ -1210,22 +1431,6 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(height: 5),
-                    Text(
-                      'Titik ini direkomendasikan untuk digunakan oleh calon pelanggan',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        decoration: TextDecoration.none,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    Divider(
-                      color: Colors.grey,
-                      thickness: 1,
-                      height: 20,
-                    ),
                     SizedBox(height: 10),
                     Text(
                       'Nama : $name',
@@ -1292,26 +1497,6 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
                         'Jarak: ${calculateDistance(currentPosition!, selectedODPPosition!).toStringAsFixed(2)} meter',
                         style: textStyleMobile,
                       ),
-                    SizedBox(height: 10),
-                    Text(
-                      'Saran : ',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
-                    SizedBox(height: 5),
-                    Text(
-                      'Perlu peningkatan promosi paket A di wilayah ini',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -1337,17 +1522,6 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(height: 10),
-                    Text(
-                      'Titik ini direkomendasikan untuk digunakan oleh calon pelanggan',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        decoration: TextDecoration.none,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
                     SizedBox(height: 10),
                     Divider(
                       color: Colors.grey,

@@ -41,8 +41,8 @@ class KriteriaController extends MyController {
       controller: TextEditingController(),
     );
     inputValidator.addField(
-      'jumlahkriteria',
-      label: "Jumlah Kriteria",
+      'bobot',
+      label: "Bobot",
       required: false,
       controller: TextEditingController(),
     );
@@ -69,11 +69,10 @@ class KriteriaController extends MyController {
       controller: TextEditingController(text: kriteria['kriteria']),
     );
     editValidator.addField(
-      'jumlahkriteria',
-      label: "Jumlah Kriteria",
+      'bobot',
+      label: "Bobot",
       required: false,
-      controller:
-          TextEditingController(text: kriteria['jumlahkriteria'].toString()),
+      controller: TextEditingController(text: kriteria['bobot'].toString()),
     );
     editValidator.addField(
       'normalisasi',
@@ -107,7 +106,7 @@ class KriteriaController extends MyController {
     editValidator.setControllerText('idkriteria', kriteria['idkriteria'] ?? '');
     editValidator.setControllerText('kriteria', kriteria['kriteria'] ?? '');
     editValidator.setControllerText(
-        'jumlahkriteria', kriteria['jumlahkriteria']?.toString() ?? '');
+        'bobot', kriteria['bobot']?.toString() ?? '');
     editValidator.setControllerText(
         'normalisasi', kriteria['normalisasi']?.toString() ?? '');
   }
@@ -279,7 +278,7 @@ class KriteriaController extends MyController {
 
   Map<String, dynamic> _parseData(Map<String, dynamic> data) {
     // Parsing data ke tipe yang sesuai di sini
-    data['jumlahkriteria'] = int.parse(data['jumlahkriteria']);
+    data['bobot'] = int.parse(data['bobot']);
     data['normalisasi'] = double.parse(data['normalisasi']);
     // Lakukan hal serupa untuk tipe data lainnya jika diperlukan
     return data;

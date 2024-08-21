@@ -46,6 +46,11 @@ class _InputanScreenState extends State<InputanScreen>
     controller = Get.put(InputanController());
     _pageController = PageController();
     _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollToPage(controller.currentPage.value);
+      }
+    });
   }
 
   @override
@@ -55,17 +60,17 @@ class _InputanScreenState extends State<InputanScreen>
     super.dispose();
   }
 
-  void _scrollToPage(int page) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        double offset = (page - 1) * 58.0; // 50 (button height) + 4*2 (margins)
-        _scrollController.animateTo(
-          offset,
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      }
-    });
+  void _scrollToPage(int pageIndex) {
+    const double itemWidth = 80.0; // Sesuaikan dengan lebar item Anda
+    if (_scrollController.hasClients) {
+      double targetScrollOffset =
+          itemWidth * (pageIndex - 1); // Sesuaikan perhitungan
+      _scrollController.animateTo(
+        targetScrollOffset,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      ); 
+    }
   }
 
   @override
@@ -140,7 +145,7 @@ class _InputanScreenState extends State<InputanScreen>
                         DropdownButton<int>(
                           value: controller.itemsPerPage.value,
                           elevation: 16, // Elevation for the dropdown shadow
-                      dropdownColor: Colors.white,
+                          dropdownColor: Colors.white,
                           items: [10, 100, -1]
                               .map((value) => DropdownMenuItem<int>(
                                     value: value,
@@ -670,16 +675,20 @@ class _InputanScreenState extends State<InputanScreen>
                             children: [
                               IconButton(
                                 onPressed: () {
-                                  if (controller.currentPage.value > 1) {
-                                    controller.changePage(
-                                        controller.currentPage.value - 1);
-                                    _pageController.animateToPage(
-                                      controller.currentPage.value - 2,
-                                      duration: Duration(milliseconds: 300),
-                                      curve: Curves.easeInOut,
-                                    );
-                                    _scrollToPage(
-                                        controller.currentPage.value - 1);
+                                  if (_scrollController.hasClients) {
+                                    if (controller.currentPage.value > 1) {
+                                      controller.changePage(
+                                          controller.currentPage.value - 1);
+                                      _pageController.animateToPage(
+                                        controller.currentPage.value -
+                                            1, // Kurangi 1 di sini
+                                        duration: Duration(milliseconds: 300),
+                                        curve: Curves.easeInOut,
+                                      );
+                                      _scrollToPage(
+                                          controller.currentPage.value -
+                                              1); // Kurangi 1 di sini
+                                    }
                                   }
                                 },
                                 icon: Icon(Icons.arrow_left),
@@ -690,63 +699,67 @@ class _InputanScreenState extends State<InputanScreen>
                                       50, // Adjust the height to fit your layout
                                   color: Colors
                                       .white, // Set background color to white
-                                  child: SingleChildScrollView(
+                                  child: ListView.builder(
+                                    controller: _scrollController,
                                     scrollDirection: Axis.horizontal,
-                                    child: Wrap(
-                                      alignment: WrapAlignment.center,
-                                      children: List.generate(
-                                          controller.totalPages, (index) {
-                                        return Container(
-                                          margin: const EdgeInsets.symmetric(
-                                              horizontal: 4.0),
-                                          height: 50,
-                                          child: TextButton(
-                                            style: TextButton.styleFrom(
-                                              foregroundColor: Colors.black,
-                                              backgroundColor: controller
-                                                          .currentPage.value ==
-                                                      index + 1
-                                                  ? Colors.blue.shade100
-                                                  : Colors.transparent,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(4.0),
-                                              ),
+                                    itemCount: controller.totalPages,
+                                    itemBuilder: (context, index) {
+                                      return Container(
+                                        margin: const EdgeInsets.symmetric(
+                                            horizontal: 4.0),
+                                        height: 50,
+                                        child: TextButton(
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.black,
+                                            backgroundColor:
+                                                controller.currentPage.value ==
+                                                        index + 1
+                                                    ? Colors.blue.shade100
+                                                    : Colors.transparent,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(4.0),
                                             ),
-                                            onPressed: () {
+                                          ),
+                                          onPressed: () {
+                                            if (_scrollController.hasClients) {
                                               controller.changePage(index + 1);
                                               _pageController.jumpToPage(index);
                                               _scrollToPage(index + 1);
-                                            },
-                                            child: Text(
-                                              '${index + 1}',
-                                              style: TextStyle(
-                                                color: controller.currentPage
-                                                            .value ==
-                                                        index + 1
-                                                    ? Colors.blue
-                                                    : Colors.black,
-                                              ),
+                                            }
+                                          },
+                                          child: Text(
+                                            '${index + 1}',
+                                            style: TextStyle(
+                                              color: controller
+                                                          .currentPage.value ==
+                                                      index + 1
+                                                  ? Colors.blue
+                                                  : Colors.black,
                                             ),
                                           ),
-                                        );
-                                      }),
-                                    ),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ),
                               ),
                               IconButton(
                                 onPressed: () {
-                                  if (controller.currentPage.value <
-                                      controller.totalPages) {
-                                    controller.changePage(
-                                        controller.currentPage.value + 1);
-                                    _pageController.animateToPage(
-                                      controller.currentPage.value,
-                                      duration: Duration(milliseconds: 300),
-                                      curve: Curves.easeInOut,
-                                    );
-                                    _scrollToPage(controller.currentPage.value);
+                                  if (_scrollController.hasClients) {
+                                    if (controller.currentPage.value <
+                                        controller.totalPages) {
+                                      controller.changePage(
+                                          controller.currentPage.value + 1);
+                                      _pageController.animateToPage(
+                                        controller.currentPage.value -
+                                            1, // Tambah 1 di sini
+                                        duration: Duration(milliseconds: 300),
+                                        curve: Curves.easeInOut,
+                                      );
+                                      _scrollToPage(controller.currentPage
+                                          .value); // Tambah 1 di sini
+                                    }
                                   }
                                 },
                                 icon: Icon(Icons.arrow_right),

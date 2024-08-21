@@ -213,7 +213,7 @@ class _KriteriaScreenState extends State<KriteriaScreen>
                                             DataCell(MyText.bodySmall(
                                                 data.kriteria)),
                                             DataCell(MyText.bodySmall(data
-                                                .jumlahkriteria
+                                                .bobot
                                                 .toStringAsFixed(2))),
                                             DataCell(MyText.bodySmall(data
                                                 .normalisasi
@@ -298,7 +298,7 @@ class _KriteriaScreenState extends State<KriteriaScreen>
             ],
           );
         },
-      ),
+      ), 
     );
   }
 }

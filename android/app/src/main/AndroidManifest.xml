@@ -2,9 +2,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
     <application
-        android:label="temp"
+        android:label="Dashboard BS Kalteng"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/logo_indibiz">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -33,6 +33,6 @@
             android:name="flutterEmbedding"
             android:value="2" />
             <meta-data android:name="com.google.android.geo.API_KEY" 
-            android:value="AIzaSyBKMi400PZpYjM2WRF4H1yfcOyPFQHgwmo" />
+            android:value="AIzaSyDQQypziRiSt-0zvK1fJhOUNv0o6Tr0Fhg" />
     </application>
 </manifest>

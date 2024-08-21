@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:get/get_state_manager/get_state_manager.dart';
 import 'package:get/instance_manager.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:webui/controller/alternatif_controller.dart';
 import 'package:webui/helper/extensions/extensions.dart';
@@ -18,6 +22,7 @@ import 'package:webui/helper/widgets/my_list_extension.dart';
 import 'package:webui/helper/widgets/my_spacing.dart';
 import 'package:webui/helper/widgets/my_text.dart';
 import 'package:webui/helper/widgets/responsive.dart';
+import 'package:webui/models/wpalternatif_data.dart';
 import 'package:webui/views/layout/layout.dart';
 import 'package:webui/widgets/custom_alert.dart';
 import 'package:webui/widgets/custom_alternatif_dialog.dart';
@@ -31,13 +36,24 @@ class AlternatifScreen extends StatefulWidget {
 
 class _AlternatifScreenState extends State<AlternatifScreen>
     with SingleTickerProviderStateMixin, UIMixin {
-  late AlternatifController controller;
+  List<Alternatif> altData = [];
+  late AlternatifController altController;
 
   @override
   void initState() {
     super.initState();
     Get.delete<AlternatifController>();
-    controller = Get.put(AlternatifController());
+    altController = Get.put(AlternatifController());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await loadODPData();
+    });
+  }
+
+  Future<void> loadODPData() async {
+    await altController.getallAlternatif();
+    setState(() {
+      altData = altController.allAlternatif;
+    });
   }
 
   @override
@@ -45,7 +61,7 @@ class _AlternatifScreenState extends State<AlternatifScreen>
     String? hakAkses = LocalStorage.getHakAkses();
     return Layout(
       child: GetBuilder(
-        init: controller,
+        init: altController,
         builder: (controller) {
           return Column(
             children: [
@@ -137,26 +153,29 @@ class _AlternatifScreenState extends State<AlternatifScreen>
                                   showBottomBorder: false,
                                   columns: [
                                     DataColumn(
-                                        label: Skeleton.keep(
-                                      child: MyText.labelMedium(
-                                        'No'.tr(),
-                                        color: contentTheme.primary,
+                                      label: Skeleton.keep(
+                                        child: MyText.labelMedium(
+                                          'No'.tr(),
+                                          color: contentTheme.primary,
+                                        ),
                                       ),
-                                    )),
+                                    ),
                                     DataColumn(
-                                        label: Skeleton.keep(
-                                      child: MyText.labelMedium(
-                                        'Kode Alternatif'.tr(),
-                                        color: contentTheme.primary,
+                                      label: Skeleton.keep(
+                                        child: MyText.labelMedium(
+                                          'Kode Alternatif'.tr(),
+                                          color: contentTheme.primary,
+                                        ),
                                       ),
-                                    )),
+                                    ),
                                     DataColumn(
-                                        label: Skeleton.keep(
-                                      child: MyText.labelMedium(
-                                        'Nama Alternatif'.tr(),
-                                        color: contentTheme.primary,
+                                      label: Skeleton.keep(
+                                        child: MyText.labelMedium(
+                                          'Nama Alternatif'.tr(),
+                                          color: contentTheme.primary,
+                                        ),
                                       ),
-                                    )),
+                                    ),
                                     if (hakAkses == 'admin')
                                       DataColumn(
                                         label: Skeleton.keep(
@@ -167,7 +186,6 @@ class _AlternatifScreenState extends State<AlternatifScreen>
                                         ),
                                       ),
                                   ],
-                                  // Bagian Tabel Isi (Tabel Body)
                                   rows: controller.allAlternatif
                                       .mapIndexed(
                                         (index, data) => DataRow(
@@ -175,6 +193,8 @@ class _AlternatifScreenState extends State<AlternatifScreen>
                                           cells: [
                                             DataCell(MyText.bodySmall(
                                                 '${index + 1}')),
+                                            DataCell(MyText.bodySmall(
+                                                data.idalternatif)),
                                             DataCell(MyText.bodySmall(
                                                 data.namaalternatif)),
                                             if (hakAkses == 'admin')
@@ -259,5 +279,26 @@ class _AlternatifScreenState extends State<AlternatifScreen>
         },
       ),
     );
+  }
+
+  double calculateDistance(LatLng point1, LatLng point2) {
+    const double earthRadius = 6371000;
+    double lat1 = point1.latitude;
+    double lon1 = point1.longitude;
+    double lat2 = point2.latitude;
+    double lon2 = point2.longitude;
+    double dLat = _toRadians(lat2 - lat1);
+    double dLon = _toRadians(lon2 - lon1);
+    double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(_toRadians(lat1)) *
+            cos(_toRadians(lat2)) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
+    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return earthRadius * c;
+  }
+
+  double _toRadians(double degrees) {
+    return degrees * (pi / 180);
   }
 }

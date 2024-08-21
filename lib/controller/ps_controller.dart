@@ -366,6 +366,46 @@ class PSScreenController extends MyController {
     update();
   }
 
+  // Pagination properties
+  var currentPage = 1.obs;
+  var itemsPerPage = 10.obs;
+
+  // Method to change items per page
+  void changeItemsPerPage(int value) {
+    itemsPerPage.value = value;
+    currentPage.value = 1; // Reset to the first page
+    update();
+  }
+
+  // Method to change the current page
+  void changePage(int page) {
+    currentPage.value = page;
+    update();
+  }
+
+  // Method to get paginated data
+  List get paginatedData {
+    int start = (currentPage.value - 1) * itemsPerPage.value;
+    int end = start + itemsPerPage.value;
+    return filteredPS.sublist(
+        start, end > filteredPS.length ? filteredPS.length : end);
+  }
+
+  // Method to get total pages
+  int get totalPages {
+    return (filteredPS.length / itemsPerPage.value).ceil();
+  }
+
+  void updatePaginatedData() {
+    int start = (currentPage.value - 1) * itemsPerPage.value;
+    int end = start + itemsPerPage.value;
+    if (itemsPerPage.value == -1) {
+      paginatedData.assignAll(filteredPS);
+    } else {
+      paginatedData.assignAll(filteredPS.sublist(start, end));
+    }
+  }
+
   void onSearch(query) {
     filteredPS = semuaPS;
     onFilter();
@@ -377,6 +417,7 @@ class PSScreenController extends MyController {
             .contains(query.toString().toLowerCase()))
         .toList();
     update();
+    updatePaginatedData();
   }
 
   Future<void> getAllOrder() async {

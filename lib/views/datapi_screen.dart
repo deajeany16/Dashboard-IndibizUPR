@@ -36,12 +36,42 @@ class _PIScreenState extends State<PIScreen>
     with SingleTickerProviderStateMixin, UIMixin {
   late PIScreenController controller;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  late PageController _pageController;
+  late ScrollController _scrollController;
 
   @override
   void initState() {
     Get.delete<PIScreenController>();
     controller = Get.put(PIScreenController());
     super.initState();
+    _pageController = PageController();
+    _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollToPage(controller.currentPage.value);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToPage(int pageIndex) {
+    const double itemWidth = 80.0; // Sesuaikan dengan lebar item Anda
+    if (_scrollController.hasClients) {
+      double targetScrollOffset =
+          itemWidth * (pageIndex - 1); // Sesuaikan perhitungan
+      _scrollController.animateTo(
+        targetScrollOffset,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+      print("Scrolling to: $targetScrollOffset"); // Debug log
+    }
   }
 
   @override
@@ -105,6 +135,32 @@ class _PIScreenState extends State<PIScreen>
                       ),
                     ),
                   ),
+                  Container(
+                    margin:
+                        EdgeInsets.only(right: 25.0), // Adjust margin as needed
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text("Items per page: "),
+                        DropdownButton<int>(
+                          value: controller.itemsPerPage.value,
+                          elevation: 16, // Elevation for the dropdown shadow
+                          dropdownColor: Colors.white,
+                          items: [10, 100, -1]
+                              .map((value) => DropdownMenuItem<int>(
+                                    value: value,
+                                    child: Text(value == -1 ? "All" : "$value"),
+                                  ))
+                              .toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              controller.changeItemsPerPage(value);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                   MyCard(
                       shadow: MyShadow(
                           elevation: 0.5, position: MyShadowPosition.bottom),
@@ -145,8 +201,8 @@ class _PIScreenState extends State<PIScreen>
                                             height: 32,
                                             child: MyText.bodySmall(
                                               item.toString(),
-                                              color: theme
-                                                  .colorScheme.onSurface,
+                                              color:
+                                                  theme.colorScheme.onSurface,
                                               fontWeight: 600,
                                             ),
                                           );
@@ -200,8 +256,8 @@ class _PIScreenState extends State<PIScreen>
                                             height: 32,
                                             child: MyText.bodySmall(
                                               item.toString(),
-                                              color: theme
-                                                  .colorScheme.onSurface,
+                                              color:
+                                                  theme.colorScheme.onSurface,
                                               fontWeight: 600,
                                             ),
                                           );
@@ -389,10 +445,8 @@ class _PIScreenState extends State<PIScreen>
                                         showCheckboxColumn: false,
                                         sortAscending: true,
                                         onSelectAll: (_) => {},
-                                        headingRowColor:
-                                            WidgetStatePropertyAll(
-                                                contentTheme.primary
-                                                    .withAlpha(40)),
+                                        headingRowColor: WidgetStatePropertyAll(
+                                            contentTheme.primary.withAlpha(40)),
                                         dataRowMaxHeight: double.infinity,
                                         dataRowMinHeight: 40,
                                         headingRowHeight: 45,
@@ -473,13 +527,13 @@ class _PIScreenState extends State<PIScreen>
                                             ),
                                           )),
                                         ],
-                                        rows: controller.filteredPI
+                                        rows: controller.paginatedData
                                             .mapIndexed((index, data) =>
                                                 DataRow(
                                                     onSelectChanged: (_) {},
                                                     cells: [
                                                       DataCell(MyText.bodySmall(
-                                                          '${index + 1}')),
+                                                          '${index + 1 + (controller.currentPage.value - 1) * controller.itemsPerPage.value}')),
                                                       if (hakAkses == 'admin' ||
                                                           hakAkses == 'inputer')
                                                         DataCell(Row(
@@ -602,6 +656,102 @@ class _PIScreenState extends State<PIScreen>
                               );
                             }),
                           ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              IconButton(
+                                onPressed: () {
+                                  if (_scrollController.hasClients) {
+                                    if (controller.currentPage.value > 1) {
+                                      controller.changePage(
+                                          controller.currentPage.value - 1);
+                                      _pageController.animateToPage(
+                                        controller.currentPage.value -
+                                            1, // Kurangi 1 di sini
+                                        duration: Duration(milliseconds: 300),
+                                        curve: Curves.easeInOut,
+                                      );
+                                      _scrollToPage(
+                                          controller.currentPage.value -
+                                              1); // Kurangi 1 di sini
+                                    }
+                                  }
+                                },
+                                icon: Icon(Icons.arrow_left),
+                              ),
+                              Expanded(
+                                child: Container(
+                                  height:
+                                      50, // Adjust the height to fit your layout
+                                  color: Colors
+                                      .white, // Set background color to white
+                                  child: ListView.builder(
+                                    controller: _scrollController,
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: controller.totalPages,
+                                    itemBuilder: (context, index) {
+                                      return Container(
+                                        margin: const EdgeInsets.symmetric(
+                                            horizontal: 4.0),
+                                        height: 50,
+                                        child: TextButton(
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.black,
+                                            backgroundColor:
+                                                controller.currentPage.value ==
+                                                        index + 1
+                                                    ? Colors.blue.shade100
+                                                    : Colors.transparent,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(4.0),
+                                            ),
+                                          ),
+                                          onPressed: () {
+                                            if (_scrollController.hasClients) {
+                                              controller.changePage(index + 1);
+                                              _pageController.jumpToPage(index);
+                                              _scrollToPage(index + 1);
+                                            }
+                                          },
+                                          child: Text(
+                                            '${index + 1}',
+                                            style: TextStyle(
+                                              color: controller
+                                                          .currentPage.value ==
+                                                      index + 1
+                                                  ? Colors.blue
+                                                  : Colors.black,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  if (_scrollController.hasClients) {
+                                    if (controller.currentPage.value <
+                                        controller.totalPages) {
+                                      controller.changePage(
+                                          controller.currentPage.value + 1);
+                                      _pageController.animateToPage(
+                                        controller.currentPage.value -
+                                            1, // Tambah 1 di sini
+                                        duration: Duration(milliseconds: 300),
+                                        curve: Curves.easeInOut,
+                                      );
+                                      _scrollToPage(controller.currentPage
+                                          .value); // Tambah 1 di sini
+                                    }
+                                  }
+                                },
+                                icon: Icon(Icons.arrow_right),
+                              ),
+                            ],
+                          )
                         ],
                       )),
                 ],

@@ -5,13 +5,11 @@ import 'dart:convert';
 import 'dart:math' show atan2, cos, pi, sin, sqrt;
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show ByteData, Uint8List, kIsWeb;
+import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
-import 'package:image/image.dart' as img;
 import 'package:location/location.dart';
 import 'package:webui/controller/layout/layout_controller.dart';
 import 'package:webui/controller/odp_controller.dart';
@@ -50,9 +48,12 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
   LatLng? selectedODPPosition;
   List<LatLng> polylineCoordinates = [];
   late BitmapDescriptor personIcon;
+  late BitmapDescriptor personIconMobi;
   bool checkhighway = false;
   bool isRecommended = false;
   List<String> roadRoutesNames = [];
+  int distanceroute = 0;
+  int distanceroutes = 0;
   List<dynamic> odpInRadius = [];
   static const double radarRadius250m = 250;
   List<dynamic> recommendations = [];
@@ -97,6 +98,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
             userPosition = currentPosition;
           }
         });
+        detectDataInRadius();
       }
     });
   }
@@ -134,31 +136,61 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
     detectDataInRadius();
   }
 
-  void detectDataInRadius() {
-    if (currentPosition == null) return;
+  Future<void> detectDataInRadius() async {
+    if (currentPosition == null || odpData.isEmpty) return;
 
     // Initialize odpInRadius list
     odpInRadius.clear();
 
-    // Loop through each ODP and add those within the 250m radius
+    // Loop through each ODP
     for (var item in odpData) {
       LatLng position = item.getLatLng();
       double distance = calculateDistance(currentPosition!, position);
 
       if (distance <= 250) {
-        odpInRadius.add({
-          'idodp': item.idodp,
-          'namaodp': item.namaodp,
-          'kategori': item.kategori,
-          'latitude': item.latitude,
-          'longitude': item.longitude,
-          'jarak': distance,
-          'checkhighway': checkhighway, // Ensure checkhighway is correctly set
-        });
+        int distances = await getDistanceFromAPI(currentPosition!, position);
+
+        if (kIsWeb) {
+          odpInRadius.add({
+            'idodp': item.idodp,
+            'namaodp': item.namaodp,
+            'kategori': item.kategori,
+            'latitude': item.latitude,
+            'longitude': item.longitude,
+            'jarak': distance,
+            'checkhighway': checkhighway,
+          });
+        } else {
+          odpInRadius.add({
+            'idodp': item.idodp,
+            'namaodp': item.namaodp,
+            'kategori': item.kategori,
+            'latitude': item.latitude,
+            'longitude': item.longitude,
+            'jarak': distances,
+            'checkhighway': checkhighway,
+          });
+        }
       }
     }
-
     recommendedProcess(odpInRadius, currentPosition);
+  }
+
+  Future<int> getDistanceFromAPI(LatLng origin, LatLng destination) async {
+    final directionsLine = DirectionsLine(dio: Dio());
+    try {
+      final directions = await directionsLine.getDirections(
+        origin: origin,
+        destination: destination,
+      );
+
+      final distanceroutes = directions?.totalDistance ?? 0;
+      // Returning the total distance from API in meters
+      return distanceroutes;
+    } catch (e) {
+      print('Error fetching directions: $e');
+      return 0;
+    }
   }
 
   Future<void> _getPolyline(LatLng origin, LatLng destination) async {
@@ -176,6 +208,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
 
       bool hasHighway = false;
       List<String> roadNames = directions?.roadNames ?? [];
+      int distancemaps = directions?.totalDistance ?? 0;
 
       // Clean up road names
       List<String> cleanedRoadNames = roadNames.map((roadName) {
@@ -197,10 +230,12 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
             [];
         checkhighway = hasHighway;
         roadRoutesNames = cleanedRoadNames;
+        distanceroute = distancemaps; // Update distances with polyline result
       });
 
-      print('Road names along the route: ${roadRoutesNames.join(', ')}');
-      print('Route includes highway: $checkhighway');
+      // print('Road names along the route: ${roadRoutesNames.join(', ')}');
+      // print('Route includes highway: $checkhighway');
+      // print('Distance : $distanceroute');
     }
   }
 
@@ -246,7 +281,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
     }
 
     // Debugging: Print isRecommended status
-    print('isRecommended: $isRecommended');
+    // print('isRecommended: $isRecommended');
 
     if (selectedODPPosition == position) {
       if (selectedODP != null) {
@@ -332,7 +367,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
           };
         }).toList();
 
-        print(recommendations);
+        print("Data sudah diproses : $recommendations");
       } else {
         print(
             'Failed to send data. Error ${response.statusCode}: ${response.reasonPhrase}');
@@ -375,34 +410,31 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
 
   void _loadPersonIcon() async {
     try {
-      final ByteData byteData =
-          await rootBundle.load('assets/images/person.png');
-      final Uint8List list = byteData.buffer.asUint8List();
-
-      final resizedImageData = await _resizeImage(list, 50);
-
-      setState(() {
-        personIcon = BitmapDescriptor.fromBytes(resizedImageData);
-      });
+      if (kIsWeb) {
+        personIcon = await BitmapDescriptor.fromAssetImage(
+            const ImageConfiguration(), 'assets/images/person.png');
+      } else {
+        personIcon = await BitmapDescriptor.fromAssetImage(
+            const ImageConfiguration(), 'assets/images/personMobi.png');
+      }
     } catch (e) {
       print('Error loading or resizing person icon: $e');
-      // Handle error, e.g., show default icon or retry loading
     }
   }
 
-  Future<Uint8List> _resizeImage(Uint8List data, int size) async {
-    try {
-      final img.Image? image = img.decodeImage(data);
-      if (image == null) return data;
+  // Future<Uint8List> _resizeImage(Uint8List data, int size) async {
+  //   try {
+  //     final img.Image? image = img.decodeImage(data);
+  //     if (image == null) return data;
 
-      final img.Image resized =
-          img.copyResize(image, width: size, height: size);
-      return Uint8List.fromList(img.encodePng(resized));
-    } catch (e) {
-      print('Error resizing image: $e');
-      return data; // Return original data in case of error
-    }
-  }
+  //     final img.Image resized =
+  //         img.copyResize(image, width: size, height: size);
+  //     return Uint8List.fromList(img.encodePng(resized));
+  //   } catch (e) {
+  //     print('Error resizing image: $e');
+  //     return data; // Return original data in case of error
+  //   }
+  // }
 
   void _updateCameraPosition(LatLng position) async {
     if (_controller.isCompleted) {
@@ -574,13 +606,10 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
               ),
             Positioned(
               top: 16.0,
-              left:
-                  MediaQuery.of(context).size.width * 0.1, // 10% from the left
-              right:
-                  MediaQuery.of(context).size.width * 0.1, // 10% from the right
+              left: MediaQuery.of(context).size.width * 0.1,
+              right: MediaQuery.of(context).size.width * 0.1,
               child: Container(
-                height: MediaQuery.of(context).size.height *
-                    0.1, // 10% of the screen height
+                height: MediaQuery.of(context).size.height * 0.1,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(10.0),
@@ -603,8 +632,8 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                           decoration: InputDecoration(
                             hintText: 'Lat,Lng (-1.2345,3.4567)',
                             hintStyle: TextStyle(
-                              fontSize:
-                                  isMobile ? 14 : 18, // Ukuran font dinamis
+                              fontSize: isMobile ? 14 : 18,
+                              // Ukuran font dinamis
                             ),
                             border: OutlineInputBorder(),
                           ),
@@ -620,7 +649,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
               ),
             ),
             Positioned(
-                bottom: 90,
+                bottom: 100,
                 left: MediaQuery.of(context).size.width * 0.05,
                 child: Text('List Rekomendasi')),
             Positioned(
@@ -628,7 +657,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
               left: 5,
               child: SizedBox(
                 height: MediaQuery.of(context).size.height * 0.1,
-                width: MediaQuery.of(context).size.width * 0.9,
+                width: MediaQuery.of(context).size.width * 0.85,
                 child: Row(
                   children: [
                     IconButton(
@@ -670,8 +699,8 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                             },
                             child: Container(
                               margin: EdgeInsets.only(right: 10),
-                              height: MediaQuery.of(context).size.height * 0.1,
-                              width: 100,
+                              height: MediaQuery.of(context).size.height * 0.2,
+                              width: 120,
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(10.0),
@@ -803,13 +832,10 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                           ),
                         Positioned(
                           top: 16.0,
-                          left: MediaQuery.of(context).size.width *
-                              0.1, // 10% from the left
-                          right: MediaQuery.of(context).size.width *
-                              0.1, // 10% from the right
+                          left: MediaQuery.of(context).size.width * 0.1,
+                          right: MediaQuery.of(context).size.width * 0.1,
                           child: Container(
-                            height: MediaQuery.of(context).size.height *
-                                0.1, // 10% of the screen height
+                            height: MediaQuery.of(context).size.height * 0.1,
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(10.0),
@@ -859,7 +885,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                           left: 5,
                           child: SizedBox(
                             height: MediaQuery.of(context).size.height * 0.1,
-                            width: MediaQuery.of(context).size.width * 0.9,
+                            width: MediaQuery.of(context).size.width * 0.7,
                             child: Row(
                               children: [
                                 IconButton(
@@ -907,7 +933,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                                                   .size
                                                   .height *
                                               0.1,
-                                          width: 100,
+                                          width: 120,
                                           decoration: BoxDecoration(
                                             color: Colors.white,
                                             borderRadius:
@@ -1035,7 +1061,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: isRecommended ? Colors.green : Colors.red,
                         decoration: TextDecoration.none,
                       ),
                       textAlign: TextAlign.center,
@@ -1108,14 +1134,14 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                     SizedBox(height: 7),
                     if (currentPosition != null)
                       Text(
-                        'Jarak: ${calculateDistance(currentPosition!, selectedODPPosition!).toStringAsFixed(2)} meter',
+                        'Jarak: $distanceroute meter',
                         style: textStyleMobile,
                       ),
                     SizedBox(height: 10),
                     Text(
                       'Saran Wilayah Prioritas Promosi : ',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: Colors.black,
                         decoration: TextDecoration.none,
@@ -1129,7 +1155,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                       child: Text(
                         'Klik disini',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                           decoration: TextDecoration.none,
                         ),
@@ -1137,7 +1163,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                     ),
                     SizedBox(height: 10),
                     Text(
-                      'Highway : ${checkhighway ? 'Lewat' : 'Tidak'}', // Tampilkan status highway
+                      'Jalan Protokol : ${checkhighway ? 'Lewat' : 'Tidak'}', // Tampilkan status highway
                       style: textStyleMobile,
                     ),
                     SizedBox(height: 10),
@@ -1177,7 +1203,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: isRecommended ? Colors.green : Colors.red,
                         decoration: TextDecoration.none,
                       ),
                       textAlign: TextAlign.center,

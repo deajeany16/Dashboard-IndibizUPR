@@ -38,6 +38,37 @@ class InputanController extends MyController {
     super.onInit();
   }
 
+//  class PaginationController extends GetxController {
+//   late PageController pageController;
+//   var currentPage = 1.obs;
+//   var itemsPerPage = 10.obs;
+//   var paginatedData = <String>[].obs;
+//   List<String> filteredInputan = List.generate(100, (index) => 'Item $index');
+
+//   PaginationController() {
+//     pageController = PageController(); // Initialize the PageController in the constructor
+//     updatePaginatedData(); // Optional: update paginated data initially
+//   }
+
+//   void updatePaginatedData() {
+//     int start = (currentPage.value - 1) * itemsPerPage.value;
+//     int end = start + itemsPerPage.value;
+//     paginatedData.assignAll(
+//       filteredInputan.sublist(start, end > filteredInputan.length ? filteredInputan.length : end),
+//     );
+//   }
+
+//   void changePage(int page) {
+//     currentPage.value = page;
+//     updatePaginatedData();
+//     pageController.jumpToPage(page - 1); // Ensure the PageController is synced
+//   }
+
+//   int get totalPages {
+//     return (filteredInputan.length / itemsPerPage.value).ceil();
+//   }
+// }
+
   InputanController() {
     inputValidator.addField(
       'nama',
@@ -404,19 +435,6 @@ class InputanController extends MyController {
     update();
     updatePaginatedData();
   }
-
-  // void onSearch(query) {
-  //   filteredInputan = semuaInputan;
-  //   onFilter();
-  //   isFiltered = false;
-  //   filteredInputan = filteredInputan
-  //       .where((inputan) => inputan.nosc
-  //           .toString()
-  //           .toLowerCase()
-  //           .contains(query.toString().toLowerCase()))
-  //       .toList();
-  //   update();
-  // }
 
   Future<void> getAllOrder() async {
     try {

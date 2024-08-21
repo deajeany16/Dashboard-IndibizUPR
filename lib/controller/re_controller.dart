@@ -372,6 +372,47 @@ class REScreenController extends MyController {
     update();
   }
 
+  
+  // Pagination properties
+  var currentPage = 1.obs;
+  var itemsPerPage = 10.obs;
+
+  // Method to change items per page
+  void changeItemsPerPage(int value) {
+    itemsPerPage.value = value;
+    currentPage.value = 1; // Reset to the first page
+    update();
+  }
+
+  // Method to change the current page
+  void changePage(int page) {
+    currentPage.value = page;
+    update();
+  }
+
+  // Method to get paginated data
+  List get paginatedData {
+    int start = (currentPage.value - 1) * itemsPerPage.value;
+    int end = start + itemsPerPage.value;
+    return filteredRE.sublist(
+        start, end > filteredRE.length ? filteredRE.length : end);
+  }
+
+  // Method to get total pages
+  int get totalPages {
+    return (filteredRE.length / itemsPerPage.value).ceil();
+  }
+
+  void updatePaginatedData() {
+    int start = (currentPage.value - 1) * itemsPerPage.value;
+    int end = start + itemsPerPage.value;
+    if (itemsPerPage.value == -1) {
+      paginatedData.assignAll(filteredRE);
+    } else {
+      paginatedData.assignAll(filteredRE.sublist(start, end));
+    }
+  }
+
   void onSearch(query) {
     filteredRE = semuaRE;
     onFilter();
@@ -383,6 +424,7 @@ class REScreenController extends MyController {
             .contains(query.toString().toLowerCase()))
         .toList();
     update();
+    updatePaginatedData();
   }
 
   Future<void> getAllOrder() async {

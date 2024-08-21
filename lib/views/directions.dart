@@ -6,35 +6,70 @@ import 'package:webui/app_constant.dart';
 class DirectionsLine {
   static const String _directionsBaseUrl =
       'https://maps.googleapis.com/maps/api/directions/json?';
+  static const String _distanceMatrixBaseUrl =
+      'https://maps.googleapis.com/maps/api/distancematrix/json?';
   static const String _roadsBaseUrl =
       'https://roads.googleapis.com/v1/snapToRoads?';
 
   final Dio _dio;
-
   DirectionsLine({required Dio dio}) : _dio = dio;
 
   Future<Directions?> getDirections({
     required LatLng origin,
     required LatLng destination,
   }) async {
-    final directionsResponse =
-        await _dio.get(_directionsBaseUrl, queryParameters: {
-      'origin': '${origin.latitude},${origin.longitude}',
-      'destination': '${destination.latitude},${destination.longitude}',
-      'key': apikey,
-    });
+    try {
+      final response = await _dio.get(_directionsBaseUrl, queryParameters: {
+        'origin': '${origin.latitude},${origin.longitude}',
+        'destination': '${destination.latitude},${destination.longitude}',
+        'key': apikey,
+      });
 
-    if (directionsResponse.statusCode == 200) {
-      final directions = Directions.fromMap(directionsResponse.data);
-      final hasHighway = await _checkHighway(directions.polylinePoints);
-      return Directions(
-        bounds: directions.bounds,
-        polylinePoints: directions.polylinePoints,
-        roadNames: directions.roadNames,
-        hasHighway: hasHighway,
-      );
+      if (response.statusCode == 200) {
+        final directions = Directions.fromMap(response.data);
+        final hasHighway = await _checkHighway(directions.polylinePoints);
+        return Directions(
+          bounds: directions.bounds,
+          polylinePoints: directions.polylinePoints,
+          roadNames: directions.roadNames,
+          hasHighway: hasHighway,
+          totalDistance: directions.totalDistance,
+        );
+      } else {
+        print('Error: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('Error fetching directions: $e');
+      return null;
     }
-    return null;
+  }
+
+  Future<DistanceMatrix?> getDistanceMatrix({
+    required LatLng origin,
+    required List<LatLng> destinations,
+  }) async {
+    try {
+      final destinationStr = destinations
+          .map((dest) => '${dest.latitude},${dest.longitude}')
+          .join('|');
+
+      final response = await _dio.get(_distanceMatrixBaseUrl, queryParameters: {
+        'origins': '${origin.latitude},${origin.longitude}',
+        'destinations': destinationStr,
+        'key': apikey,
+      });
+
+      if (response.statusCode == 200) {
+        return DistanceMatrix.fromMap(response.data);
+      } else {
+        print('Error: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('Error fetching distance matrix: $e');
+      return null;
+    }
   }
 
   Future<bool> _checkHighway(List<PointLatLng> polylinePoints) async {
@@ -65,14 +100,51 @@ class DirectionsLine {
   }
 }
 
+class DistanceMatrix {
+  final List<DistanceMatrixElement> elements;
+
+  DistanceMatrix({required this.elements});
+
+  factory DistanceMatrix.fromMap(Map<String, dynamic> map) {
+    if (map['rows'] == null || (map['rows'] as List).isEmpty) {
+      return DistanceMatrix(elements: []);
+    }
+
+    final elements = (map['rows'][0]['elements'] as List)
+        .map((e) => DistanceMatrixElement.fromMap(e))
+        .toList();
+
+    return DistanceMatrix(elements: elements);
+  }
+}
+
+class DistanceMatrixElement {
+  final int distance; // in meters
+  final int duration; // in seconds
+
+  DistanceMatrixElement({
+    required this.distance,
+    required this.duration,
+  });
+
+  factory DistanceMatrixElement.fromMap(Map<String, dynamic> map) {
+    return DistanceMatrixElement(
+      distance: map['distance']['value'],
+      duration: map['duration']['value'],
+    );
+  }
+}
+
 class Directions {
   final LatLngBounds bounds;
   final List<PointLatLng> polylinePoints;
   final List<String> roadNames;
   final bool hasHighway;
+  final int totalDistance;
 
   static List<String> highwayRoadNames = [
     'Jl. Cilik Riwut',
+    'Jl. Rajawali',
     'Jl. Ahmad Yani',
     'Jl. Murjani',
     'Jl. Tilung',
@@ -86,7 +158,9 @@ class Directions {
     'Jl. Sethadji',
     'Jl. Kinibalu',
     'Jl. Beliang',
-    'Jl. Trans Kalimantan'
+    'Jl. Trans Kalimantan',
+    'Jl. Adonis Samad',
+    'Jl. RTA Milono'
   ];
 
   Directions({
@@ -94,6 +168,7 @@ class Directions {
     required this.polylinePoints,
     required this.roadNames,
     required this.hasHighway,
+    required this.totalDistance,
   });
 
   factory Directions.fromMap(Map<String, dynamic> map) {
@@ -102,6 +177,7 @@ class Directions {
         bounds: LatLngBounds(northeast: LatLng(0, 0), southwest: LatLng(0, 0)),
         polylinePoints: [],
         roadNames: [],
+        totalDistance: 0,
         hasHighway: false,
       );
     }
@@ -124,9 +200,11 @@ class Directions {
 
     bool highwayPresent = false;
     List<String> roadNames = [];
+    int distance = 0;
 
     if (data['legs'] != null) {
       for (var leg in data['legs']) {
+        distance = leg['distance']['value'];
         for (var step in leg['steps']) {
           if (step['maneuver'] == 'merge' || step['maneuver'] == 'ramp') {
             highwayPresent = true;
@@ -134,6 +212,7 @@ class Directions {
           if (step['html_instructions'] != null) {
             final instruction = step['html_instructions'].toString();
             roadNames.add(instruction);
+
             // Check if any highway road name matches the instruction
             if (_containsHighwayRoadName(instruction)) {
               highwayPresent = true;
@@ -148,17 +227,17 @@ class Directions {
       polylinePoints:
           PolylinePoints().decodePolyline(data['overview_polyline']['points']),
       roadNames: roadNames,
+      totalDistance: distance,
       hasHighway: highwayPresent,
     );
   }
 
   static bool _containsHighwayRoadName(String instruction) {
-    // Check if any highway road name matches the instruction
-    for (var roadName in highwayRoadNames) {
-      if (instruction.toLowerCase().contains(roadName.toLowerCase())) {
-        return true;
-      }
-    }
-    return false;
+    final pattern = highwayRoadNames
+        .map((name) =>
+            RegExp(r'\b' + RegExp.escape(name) + r'\b', caseSensitive: false))
+        .toList();
+
+    return pattern.any((regex) => regex.hasMatch(instruction));
   }
 }
