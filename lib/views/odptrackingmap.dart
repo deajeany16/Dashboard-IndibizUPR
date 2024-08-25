@@ -699,7 +699,7 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
                             },
                             child: Container(
                               margin: EdgeInsets.only(right: 10),
-                              height: MediaQuery.of(context).size.height * 0.2,
+                              height: MediaQuery.of(context).size.height * 0.08,
                               width: 120,
                               decoration: BoxDecoration(
                                 color: Colors.white,
@@ -748,12 +748,14 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
           ],
         ),
         floatingActionButton: Container(
-          margin: EdgeInsets.only(bottom: 80.0),
+          width: 50.0, // Ubah lebar Container sesuai kebutuhan
+          height: 50.0, // Ubah tinggi Container sesuai kebutuhan
+          margin: EdgeInsets.only(
+              bottom: 90.0), // Sesuaikan margin untuk posisi yang diinginkan
           child: FloatingActionButton(
             onPressed: () {
               if (userPosition != null) {
                 _moveToLocation(userPosition!);
-                _findNearestODP();
               }
             },
             backgroundColor: Colors.grey[800],
@@ -995,12 +997,14 @@ class _ODPTrackingMapScreenState extends State<ODPTrackingMapScreen> {
           ],
         ),
         floatingActionButton: Container(
-          margin: EdgeInsets.only(bottom: 80.0),
+          width: 50.0, // Ubah lebar Container sesuai kebutuhan
+          height: 50.0, // Ubah tinggi Container sesuai kebutuhan
+          margin: EdgeInsets.only(
+              bottom: 100.0), // Sesuaikan margin untuk posisi yang diinginkan
           child: FloatingActionButton(
             onPressed: () {
               if (userPosition != null) {
                 _moveToLocation(userPosition!);
-                _findNearestODP();
               }
             },
             backgroundColor: Colors.grey[800],

@@ -885,8 +885,9 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
               right:
                   MediaQuery.of(context).size.width * 0.1, // 10% from the right
               child: Container(
-                height: MediaQuery.of(context).size.height *
-                    0.1, // 10% of the screen height
+                height: MediaQuery.of(context).size.height * 0.1,
+                width: MediaQuery.of(context).size.height *
+                    0.85, // 10% of the screen height
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(10.0),
@@ -926,7 +927,7 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
               ),
             ),
             Positioned(
-              bottom: 120,
+              bottom: 100,
               left: MediaQuery.of(context).size.width * 0.05,
               child: Text(
                 'List Wilayah Promosi',
@@ -937,8 +938,7 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
               bottom: 20,
               left: 5,
               child: SizedBox(
-                height: MediaQuery.of(context).size.height *
-                    0.2, 
+                height: MediaQuery.of(context).size.height * 0.09,
                 width: MediaQuery.of(context).size.width * 0.8,
                 child: Row(
                   children: [
@@ -970,7 +970,7 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
                               margin: EdgeInsets.only(right: 10),
                               height: MediaQuery.of(context).size.height *
                                   0.2, // Adjusted height
-                              width: 200, // Increased width to fit more content
+                              width: 220, // Increased width to fit more content
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(10.0),
@@ -1057,7 +1057,11 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
           ],
         ),
         floatingActionButton: Container(
-          margin: EdgeInsets.only(bottom: 80.0),
+          width: 50.0, // Ubah lebar Container sesuai kebutuhan
+          height: 50.0, // Ubah tinggi Container sesuai kebutuhan
+          margin: EdgeInsets.only(
+              bottom: 90.0,
+              right: 0), // Sesuaikan margin untuk posisi yang diinginkan
           child: FloatingActionButton(
             onPressed: () {
               if (userPosition != null) {
@@ -1232,8 +1236,8 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
                         ),
                       ),
                       Positioned(
-                        bottom: 150,
-                        left: MediaQuery.of(context).size.width * 0.05,
+                        bottom: 160,
+                        left: 50,
                         child: Text(
                           'List Wilayah Promosi',
                           style: TextStyle(
@@ -1245,8 +1249,8 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
                         left: 5,
                         child: SizedBox(
                           height: MediaQuery.of(context).size.height *
-                              0.1, // Increased height to accommodate criteria
-                          width: MediaQuery.of(context).size.width * 0.7,
+                              0.2, // Increased height to accommodate criteria
+                          width: MediaQuery.of(context).size.width * 0.75,
                           child: Row(
                             children: [
                               IconButton(
@@ -1381,7 +1385,10 @@ class _OrderSurveiMapScreenState extends State<OrderSurveiMapScreen> {
           ],
         ),
         floatingActionButton: Container(
-          margin: EdgeInsets.only(bottom: 80.0),
+          width: 50.0, // Ubah lebar Container sesuai kebutuhan
+          height: 50.0, // Ubah tinggi Container sesuai kebutuhan
+          margin: EdgeInsets.only(
+              bottom: 100.0), // Sesuaikan margin untuk posisi yang diinginkan
           child: FloatingActionButton(
             onPressed: () {
               if (userPosition != null) {
