@@ -1,0 +1,502 @@
+[
+  {
+    "product_name": "Oxygen",
+    "price": 501,
+    "rating": 0.2
+  },
+  {
+    "product_name": "Alprazolam",
+    "price": 712,
+    "rating": 0.3
+  },
+  {
+    "product_name": "Rituxan",
+    "price": 409,
+    "rating": 0.8
+  },
+  {
+    "product_name": "FLOMAX",
+    "price": 987,
+    "rating": 0.4
+  },
+  {
+    "product_name": "Oxygen",
+    "price": 427,
+    "rating": 0.8
+  },
+  {
+    "product_name": "Tobramycin",
+    "price": 298,
+    "rating": 0.6
+  },
+  {
+    "product_name": "Quetiapine fumarate",
+    "price": 154,
+    "rating": 1.0
+  },
+  {
+    "product_name": "Rolaids Ultra Strength Fruit",
+    "price": 699,
+    "rating": 0.1
+  },
+  {
+    "product_name": "Allergenic Extracts Standardized Mite",
+    "price": 921,
+    "rating": 0.0
+  },
+  {
+    "product_name": "Cough Perspiration",
+    "price": 561,
+    "rating": 0.3
+  },
+  {
+    "product_name": "TESTOSTERONE ENANTHATE",
+    "price": 799,
+    "rating": 0.2
+  },
+  {
+    "product_name": "Best Choice",
+    "price": 437,
+    "rating": 0.6
+  },
+  {
+    "product_name": "CYBERWHITE HD BB ADVANCED BRIGHTENING BROAD SPECTRUM SPF 50",
+    "price": 214,
+    "rating": 0.3
+  },
+  {
+    "product_name": "Ocean Breeze",
+    "price": 710,
+    "rating": 0.7
+  },
+  {
+    "product_name": "SINGULAIR",
+    "price": 465,
+    "rating": 0.1
+  },
+  {
+    "product_name": "SMART SENSE",
+    "price": 723,
+    "rating": 0.6
+  },
+  {
+    "product_name": "Amcinonide",
+    "price": 783,
+    "rating": 0.2
+  },
+  {
+    "product_name": "Carvedilol",
+    "price": 664,
+    "rating": 1.0
+  },
+  {
+    "product_name": "4 Way",
+    "price": 990,
+    "rating": 0.2
+  },
+  {
+    "product_name": "PredniSONE",
+    "price": 841,
+    "rating": 0.1
+  },
+  {
+    "product_name": "sore throat spray",
+    "price": 388,
+    "rating": 0.9
+  },
+  {
+    "product_name": "Dr. Fresh Oral Care",
+    "price": 441,
+    "rating": 0.3
+  },
+  {
+    "product_name": "Childrens Ibuprofen",
+    "price": 985,
+    "rating": 0.9
+  },
+  {
+    "product_name": "DROSPIRENONE AND ETHINYL ESTRADIOL",
+    "price": 313,
+    "rating": 0.2
+  },
+  {
+    "product_name": "Riluzole",
+    "price": 856,
+    "rating": 0.7
+  },
+  {
+    "product_name": "DIBROMM",
+    "price": 347,
+    "rating": 0.9
+  },
+  {
+    "product_name": "Symax SL",
+    "price": 157,
+    "rating": 0.9
+  },
+  {
+    "product_name": "formu care ranitidine",
+    "price": 759,
+    "rating": 0.8
+  },
+  {
+    "product_name": "Pleo Ut S",
+    "price": 383,
+    "rating": 0.1
+  },
+  {
+    "product_name": "Neurontin",
+    "price": 377,
+    "rating": 0.6
+  },
+  {
+    "product_name": "Tretinoin",
+    "price": 242,
+    "rating": 0.4
+  },
+  {
+    "product_name": "Antacid",
+    "price": 756,
+    "rating": 1.0
+  },
+  {
+    "product_name": "Parastat",
+    "price": 233,
+    "rating": 0.8
+  },
+  {
+    "product_name": "Cymbalta",
+    "price": 639,
+    "rating": 0.6
+  },
+  {
+    "product_name": "TAPAZOLE",
+    "price": 416,
+    "rating": 0.2
+  },
+  {
+    "product_name": "PRAMIPEXOLE DIHYDROCHLORIDE",
+    "price": 314,
+    "rating": 0.1
+  },
+  {
+    "product_name": "Levetiracetam",
+    "price": 651,
+    "rating": 0.0
+  },
+  {
+    "product_name": "Gabapentin",
+    "price": 756,
+    "rating": 0.2
+  },
+  {
+    "product_name": "First Aid Double Antibiotic",
+    "price": 417,
+    "rating": 0.9
+  },
+  {
+    "product_name": "Levetiracetam",
+    "price": 282,
+    "rating": 0.6
+  },
+  {
+    "product_name": "Vibativ",
+    "price": 703,
+    "rating": 0.6
+  },
+  {
+    "product_name": "Lemon Verbena Antibacterial Hand Wash",
+    "price": 677,
+    "rating": 0.3
+  },
+  {
+    "product_name": "Paroxetine",
+    "price": 310,
+    "rating": 0.3
+  },
+  {
+    "product_name": "ESSENTIAL BODY NUTRITIVE BUTTER",
+    "price": 325,
+    "rating": 0.3
+  },
+  {
+    "product_name": "Night Time Cherry",
+    "price": 666,
+    "rating": 0.3
+  },
+  {
+    "product_name": "Moderiba",
+    "price": 264,
+    "rating": 0.1
+  },
+  {
+    "product_name": "Mexican Tea",
+    "price": 228,
+    "rating": 0.2
+  },
+  {
+    "product_name": "Groundsel",
+    "price": 587,
+    "rating": 0.0
+  },
+  {
+    "product_name": "Ranitidine Hydrochloride",
+    "price": 426,
+    "rating": 0.3
+  },
+  {
+    "product_name": "Terrasil Boil Pain Relief",
+    "price": 299,
+    "rating": 0.3
+  },
+  {
+    "product_name": "Levetiracetam",
+    "price": 470,
+    "rating": 0.1
+  },
+  {
+    "product_name": "Hua Tuo",
+    "price": 916,
+    "rating": 0.7
+  },
+  {
+    "product_name": "Homeopathic Sleep Formula",
+    "price": 170,
+    "rating": 0.3
+  },
+  {
+    "product_name": "TRICHOPHYTON MENTAGROPHYTES",
+    "price": 690,
+    "rating": 0.9
+  },
+  {
+    "product_name": "DIVALPROEX SODIUM",
+    "price": 106,
+    "rating": 0.3
+  },
+  {
+    "product_name": "carvedilol",
+    "price": 807,
+    "rating": 0.2
+  },
+  {
+    "product_name": "PHENERGAN",
+    "price": 457,
+    "rating": 0.3
+  },
+  {
+    "product_name": "ZOMIG",
+    "price": 918,
+    "rating": 0.3
+  },
+  {
+    "product_name": "Clindamycin",
+    "price": 815,
+    "rating": 0.6
+  },
+  {
+    "product_name": "Stomach relief",
+    "price": 894,
+    "rating": 0.4
+  },
+  {
+    "product_name": "Kadian",
+    "price": 804,
+    "rating": 0.9
+  },
+  {
+    "product_name": "Mucus ER",
+    "price": 659,
+    "rating": 0.6
+  },
+  {
+    "product_name": "age renewal firming and hydrating moisturizer",
+    "price": 335,
+    "rating": 1.0
+  },
+  {
+    "product_name": "Promethazine Hydrochloride",
+    "price": 689,
+    "rating": 0.3
+  },
+  {
+    "product_name": "Enteric Safety Coated Aspirin",
+    "price": 808,
+    "rating": 0.8
+  },
+  {
+    "product_name": "FNG",
+    "price": 348,
+    "rating": 0.5
+  },
+  {
+    "product_name": "Modafinil",
+    "price": 906,
+    "rating": 0.8
+  },
+  {
+    "product_name": "Xopenex",
+    "price": 860,
+    "rating": 0.4
+  },
+  {
+    "product_name": "Levofloxacin",
+    "price": 214,
+    "rating": 0.2
+  },
+  {
+    "product_name": "PROVIGIL",
+    "price": 653,
+    "rating": 0.6
+  },
+  {
+    "product_name": "Leader",
+    "price": 889,
+    "rating": 0.8
+  },
+  {
+    "product_name": "SBS UltraGreen",
+    "price": 772,
+    "rating": 0.6
+  },
+  {
+    "product_name": "Metoprolol Tartrate",
+    "price": 770,
+    "rating": 0.2
+  },
+  {
+    "product_name": "Satogesic Hot",
+    "price": 738,
+    "rating": 0.9
+  },
+  {
+    "product_name": "Childrens Aspirin",
+    "price": 612,
+    "rating": 0.6
+  },
+  {
+    "product_name": "Sulfamethoxazole and Trimethoprim",
+    "price": 698,
+    "rating": 0.6
+  },
+  {
+    "product_name": "Grass Smut Mixture",
+    "price": 555,
+    "rating": 1.0
+  },
+  {
+    "product_name": "Ticlopidine Hydrochloride",
+    "price": 107,
+    "rating": 0.1
+  },
+  {
+    "product_name": "Metformin Hydrochloride",
+    "price": 596,
+    "rating": 0.2
+  },
+  {
+    "product_name": "Lithium Carbonate",
+    "price": 130,
+    "rating": 0.6
+  },
+  {
+    "product_name": "emuaidMAX",
+    "price": 959,
+    "rating": 0.2
+  },
+  {
+    "product_name": "HYDRALAZINE HYDROCHLORIDE",
+    "price": 608,
+    "rating": 0.1
+  },
+  {
+    "product_name": "good neighbor pharmacy Lice",
+    "price": 261,
+    "rating": 0.0
+  },
+  {
+    "product_name": "LES BEIGES",
+    "price": 308,
+    "rating": 0.1
+  },
+  {
+    "product_name": "Acid Detox",
+    "price": 131,
+    "rating": 0.3
+  },
+  {
+    "product_name": "Mercurius auratus Pulmo",
+    "price": 831,
+    "rating": 0.8
+  },
+  {
+    "product_name": "CYSTARAN",
+    "price": 195,
+    "rating": 0.8
+  },
+  {
+    "product_name": "Mustard Seed",
+    "price": 337,
+    "rating": 0.8
+  },
+  {
+    "product_name": "equaline anti nausea",
+    "price": 500,
+    "rating": 0.2
+  },
+  {
+    "product_name": "Hydrocodone Bitartrate and Acetaminophen",
+    "price": 351,
+    "rating": 0.9
+  },
+  {
+    "product_name": "Methylprednisolone Acetate",
+    "price": 507,
+    "rating": 0.8
+  },
+  {
+    "product_name": "ERY-TAB",
+    "price": 467,
+    "rating": 0.9
+  },
+  {
+    "product_name": "up and up antacid anti gas",
+    "price": 170,
+    "rating": 0.3
+  },
+  {
+    "product_name": "AcneFree Clear Skin Treatments",
+    "price": 277,
+    "rating": 0.9
+  },
+  {
+    "product_name": "bareMinerals 5-in-1 BB Advanced Performance Eyeshadow Broad Spectrum SPF 15",
+    "price": 763,
+    "rating": 0.8
+  },
+  {
+    "product_name": "Exchange Select Sport Sunscreen",
+    "price": 707,
+    "rating": 0.6
+  },
+  {
+    "product_name": "Nasal Four",
+    "price": 189,
+    "rating": 1.0
+  },
+  {
+    "product_name": "CEFTIN",
+    "price": 244,
+    "rating": 0.7
+  },
+  {
+    "product_name": "Winter Vanilla Hand Sanitizer",
+    "price": 359,
+    "rating": 0.7
+  },
+  {
+    "product_name": "EQUALINE BLUE ICE PAIN RELIEVING",
+    "price": 997,
+    "rating": 0.9
+  }
+]
